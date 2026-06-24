@@ -24,24 +24,24 @@ const REQUIRED_FIELDS: [&str; 9] = [
 ];
 
 const TEMPLATE_COLUMNS: [(&str, &str); 19] = [
-    ("numero_legajo", "Numero de legajo"),
+    ("numero_legajo", "Número de legajo"),
     ("apellidos_nombres", "Apellidos y nombres"),
-    ("dni", "Numero de Documento de Identidad"),
-    ("organo_unidad", "Organo o unidad organica"),
+    ("dni", "Número de Documento de Identidad"),
+    ("organo_unidad", "Órgano o unidad orgánica"),
     ("cargo_puesto", "Nombre del cargo estructural y/o puesto"),
     ("regimen_laboral", "Tipo de contrato"),
     ("fecha_nacimiento", "Fecha de nacimiento"),
-    ("fecha_vinculacion", "Fecha de vinculacion"),
-    ("remuneracion", "Remuneracion"),
+    ("fecha_vinculacion", "Fecha de vinculación"),
+    ("remuneracion", "Remuneración"),
     ("celular", "Celular"),
-    ("direccion", "Direccion"),
-    ("categoria_estudios", "Categoria de estudios"),
-    ("correo_electronico", "Correo electronico"),
-    ("perfil_mof", "Perfil solicitado segun el MOF"),
+    ("direccion", "Dirección"),
+    ("categoria_estudios", "Categoría de estudios"),
+    ("correo_electronico", "Correo electrónico"),
+    ("perfil_mof", "Perfil solicitado según el MOF"),
     ("hijos_menores_de_edad", "Hijos menores de edad"),
-    ("condicion", "Condicion"),
+    ("condicion", "Condición"),
     ("estado_legajo", "Estado del legajo"),
-    ("ubicacion_legajo", "Ubicacion del legajo"),
+    ("ubicacion_legajo", "Ubicación del legajo"),
     ("observaciones", "Observaciones"),
 ];
 
@@ -1238,7 +1238,6 @@ fn build_import_payload(
         ],
     )
     .or_else(|| area.clone())
-    .or_else(|| take_import_value(row, headers, &mut used_columns, &["perfilesolicitadossegunelmof"]))
     .unwrap_or_else(|| organo_unidad.clone());
     let regimen_laboral = sheet_regimen_label(sheet_name);
     let fecha_nacimiento = take_import_value(row, headers, &mut used_columns, &["fechadenacimiento"])
@@ -1259,8 +1258,21 @@ fn build_import_payload(
         take_import_value(row, headers, &mut used_columns, &["categoriadeestudios"]).unwrap_or_default();
     let correo_electronico =
         take_import_value(row, headers, &mut used_columns, &["correoelectronico"]).unwrap_or_default();
-    let perfil_mof = take_import_value(row, headers, &mut used_columns, &["perfilesolicitadossegunelmof"])
-        .unwrap_or_default();
+    let perfil_mof = take_import_value(
+        row,
+        headers,
+        &mut used_columns,
+        &[
+            "perfilmof",
+            "perfilesolicitadossegunelmof",
+            "perfilesolicitadosegunelmof",
+            "perfilesolicitadosegunelmof",
+            "perfilsolicitadosegunelmof",
+            "perfilsolicitadosegunelmof",
+            "mof",
+        ],
+    )
+    .unwrap_or_default();
     let hijos_menores_de_edad =
         take_import_value(row, headers, &mut used_columns, &["hijosmenoresdeedad"]).unwrap_or_default();
     let condicion = take_import_value(row, headers, &mut used_columns, &["condicion"]).unwrap_or_default();
@@ -1393,7 +1405,13 @@ fn looks_like_import_headers(headers: &HashMap<String, usize>) -> bool {
         "numerodelegajo",
         "correoelectronico",
         "categoriadeestudios",
+        "perfilmof",
         "perfilesolicitadossegunelmof",
+        "perfilesolicitadosegunelmof",
+        "perfilesolicitadosegunelmof",
+        "perfilsolicitadosegunelmof",
+        "perfilsolicitadosegunelmof",
+        "mof",
         "estadodellegajo",
         "ubicaciondellegajo",
         "condicion",

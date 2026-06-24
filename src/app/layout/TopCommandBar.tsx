@@ -25,7 +25,7 @@ export default function TopCommandBar(props: TopCommandBarProps): JSX.Element {
             <input
               value={props.search}
               onInput={(event) => props.onSearch(event.currentTarget.value)}
-              placeholder="Buscar por legajo, nombre, DNI, area o cargo..."
+            placeholder="Buscar por legajo, nombre, DNI, área o cargo..."
               class="w-full bg-transparent text-sm text-ink placeholder:text-ink-soft focus:outline-none"
             />
           </label>
@@ -34,7 +34,7 @@ export default function TopCommandBar(props: TopCommandBarProps): JSX.Element {
         <div class="flex flex-wrap items-center gap-3 lg:justify-end">
           <div class="inline-flex items-center gap-2 rounded-full border border-shell-border bg-white/90 px-4 py-2.5 text-xs font-semibold text-ink">
             <span class="h-2.5 w-2.5 rounded-full bg-success shadow-[0_0_0_6px_rgba(47,125,92,0.15)]" />
-            Operacion local segura
+            Operación local segura
           </div>
           <ActionButton variant="secondary" onClick={props.onBackup}>
             Crear respaldo

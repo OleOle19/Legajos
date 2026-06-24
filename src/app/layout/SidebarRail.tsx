@@ -12,7 +12,7 @@ interface SidebarRailProps {
 const navItems = [
   { id: "dashboard", label: "Inicio", value: "/dashboard" as const, icon: LayoutGrid },
   { id: "legajos", label: "Legajos", value: "/legajos" as const, icon: FileSpreadsheet },
-  { id: "operaciones", label: "Importacion y respaldo", value: "/operaciones" as const, icon: FolderArchive }
+  { id: "operaciones", label: "Importación y respaldo", value: "/operaciones" as const, icon: FolderArchive }
 ];
 
 export default function SidebarRail(props: SidebarRailProps) {
@@ -24,8 +24,8 @@ export default function SidebarRail(props: SidebarRailProps) {
           <h1 class="mt-3 font-display text-[2.35rem] font-semibold leading-none tracking-[-0.05em] sm:text-[2.6rem]">
             Legajo RH
           </h1>
-          <p class="mt-3 max-w-[18rem] text-sm leading-6 text-white/86">
-            Plataforma local para custodiar legajos activos y pasivos con trazabilidad documental.
+          <p class="mt-3 max-w-[13rem] text-[13px] leading-5 text-white/84">
+            Custodia local de legajos con trazabilidad documental.
           </p>
         </div>
 

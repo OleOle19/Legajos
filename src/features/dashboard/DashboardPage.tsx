@@ -46,10 +46,10 @@ export default function DashboardPage(props: DashboardPageProps) {
   });
 
   const metricCards = createMemo(() => [
-    { label: "Total de legajos", value: props.stats.total, note: "Relacion consolidada", tone: "brand" as const },
+    { label: "Total de legajos", value: props.stats.total, note: "Relación consolidada", tone: "brand" as const },
     { label: "Activos", value: props.stats.activos, note: "Legajos en uso", tone: "success" as const },
-    { label: "Pasivos", value: props.stats.pasivos, note: "Custodia historica", tone: "warning" as const },
-    { label: "Sin ubicacion", value: props.stats.sinUbicacion, note: "Revisar archivo fisico", tone: "neutral" as const },
+    { label: "Pasivos", value: props.stats.pasivos, note: "Custodia histórica", tone: "warning" as const },
+    { label: "Sin ubicación", value: props.stats.sinUbicacion, note: "Revisar archivo físico", tone: "neutral" as const },
     { label: "Adjuntos", value: props.stats.adjuntos, note: "Soporte digital asociado", tone: "brand" as const }
   ]);
 
@@ -69,7 +69,7 @@ export default function DashboardPage(props: DashboardPageProps) {
               Panorama operativo del archivo de legajos
             </h2>
             <p class="mt-4 max-w-3xl text-[15px] leading-7 text-ink-soft">
-              Revisa el padron activo y pasivo, controla la cobertura documental y entra rapido a las
+              Revisa el padrón activo y pasivo, controla la cobertura documental y entra rápido a las
               operaciones que hoy realmente importan.
             </p>
 
@@ -87,9 +87,9 @@ export default function DashboardPage(props: DashboardPageProps) {
                 tone={visibleStats().sinAdjuntos ? "warning" : "success"}
               />
               <OverviewTile
-                label="Ubicacion trazable"
+                label="Ubicación trazable"
                 value={`${visibleStats().coberturaUbicacion}%`}
-                note={`${Math.max(visibleStats().visibles - visibleStats().sinUbicacion, 0)} con ubicacion visible.`}
+                note={`${Math.max(visibleStats().visibles - visibleStats().sinUbicacion, 0)} con ubicación visible.`}
                 tone={visibleStats().sinUbicacion ? "warning" : "success"}
               />
             </div>
@@ -111,9 +111,9 @@ export default function DashboardPage(props: DashboardPageProps) {
                 tone={visibleStats().sinAdjuntos ? "warning" : "success"}
               />
               <ProgressPanel
-                label="Ubicacion documentada"
+                label="Ubicación documentada"
                 value={visibleStats().coberturaUbicacion}
-                hint={`${visibleStats().sinUbicacion} con ubicacion por revisar`}
+                hint={`${visibleStats().sinUbicacion} con ubicación por revisar`}
                 tone={visibleStats().sinUbicacion ? "danger" : "success"}
               />
             </div>
@@ -141,8 +141,8 @@ export default function DashboardPage(props: DashboardPageProps) {
       <div class="grid gap-5 xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
         <SectionCard eyebrow="Atencion inmediata" title="Lo crucial ahora" class="bg-shell-panel-strong/95" bodyClass="grid gap-3">
           <ActionTile
-            title="Revisar padron principal"
-            note="Entrar al listado completo, buscar por DNI, nombre o numero de legajo."
+            title="Revisar padrón principal"
+            note="Entrar al listado completo, buscar por DNI, nombre o número de legajo."
             meta={`${visibleStats().visibles} visibles`}
             onClick={props.onNavigateLegajos}
             tone="brand"
@@ -184,9 +184,9 @@ export default function DashboardPage(props: DashboardPageProps) {
             {regimenRows().length === 0 && (
               <div class="grid min-h-[250px] place-items-center rounded-3xl border border-dashed border-shell-border bg-white/70 px-6 text-center">
                 <div class="max-w-[320px]">
-                  <strong class="text-base text-ink">Aun no hay tipos de contrato visibles</strong>
+                  <strong class="text-base text-ink">Aún no hay tipos de contrato visibles</strong>
                   <p class="mt-2 text-sm leading-6 text-ink-soft">
-                    Cuando registres o importes legajos, aqui veras su reparto por tipo de contrato.
+                    Cuando registres o importes legajos, aquí verás su reparto por tipo de contrato.
                   </p>
                 </div>
               </div>
@@ -225,7 +225,7 @@ export default function DashboardPage(props: DashboardPageProps) {
           </div>
         </SectionCard>
 
-        <SectionCard eyebrow="Actividad reciente" title="Ultimos movimientos" class="bg-shell-panel-strong/95">
+        <SectionCard eyebrow="Actividad reciente" title="Últimos movimientos" class="bg-shell-panel-strong/95">
           <div class="grid gap-3">
             <For each={props.stats.recientes}>
               {(item) => (
@@ -245,7 +245,7 @@ export default function DashboardPage(props: DashboardPageProps) {
             </For>
             {props.stats.recientes.length === 0 && (
               <div class="rounded-3xl border border-dashed border-shell-border bg-white/70 px-5 py-8 text-center text-sm text-ink-soft">
-                Aun no hay movimientos registrados para mostrar en el inicio.
+                Aún no hay movimientos registrados para mostrar en el inicio.
               </div>
             )}
           </div>

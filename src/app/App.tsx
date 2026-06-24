@@ -111,9 +111,9 @@ export default function App() {
           ? `Creados: ${summary.created} - Actualizados: ${summary.updated} - Omitidos: ${summary.skipped}${
               summary.errors.length ? ` - Errores: ${summary.errors.join(" | ")}` : ""
             }`
-          : "Importacion completada."
+          : "Importación completada."
       );
-      showToast("Importacion completada.", "success");
+      showToast("Importación completada.", "success");
     },
     onError: (error) => showToast(getErrorMessage(error, "No se pudo importar el archivo."), "danger")
   }));

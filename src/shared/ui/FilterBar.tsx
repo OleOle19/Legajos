@@ -15,13 +15,13 @@ export default function FilterBar(props: FilterBarProps) {
     <div class="rounded-card border border-shell-border bg-white/72 p-5 shadow-card">
       <div class="grid gap-4 lg:grid-cols-2 2xl:grid-cols-4">
         <label class="grid min-w-0 gap-2.5 text-sm">
-          <span class="pl-1 font-medium text-ink-soft">Busqueda general</span>
+          <span class="pl-1 font-medium text-ink-soft">Búsqueda general</span>
           <div class="flex items-center gap-3 rounded-[24px] border border-shell-border bg-white px-4 py-3 shadow-[0_8px_24px_rgba(23,38,61,0.05)] transition duration-150 focus-within:border-brand/40 focus-within:shadow-[0_12px_28px_rgba(34,84,140,0.10)]">
             <Search class="h-4 w-4 shrink-0 text-ink-faint" />
             <input
               value={props.filters.search}
               onInput={(event) => update("search", event.currentTarget.value)}
-              placeholder="Numero, nombre, DNI o cargo..."
+              placeholder="Número, nombre, DNI o cargo..."
               class="w-full min-w-0 bg-transparent text-sm text-ink placeholder:text-ink-faint focus:outline-none"
             />
           </div>
@@ -42,11 +42,11 @@ export default function FilterBar(props: FilterBarProps) {
           </div>
         </label>
         <label class="grid min-w-0 gap-2.5 text-sm">
-          <span class="pl-1 font-medium text-ink-soft">Area de trabajo</span>
+          <span class="pl-1 font-medium text-ink-soft">Área de trabajo</span>
           <input
             value={props.filters.organo_unidad}
             onInput={(event) => update("organo_unidad", event.currentTarget.value)}
-            placeholder="Filtrar por area"
+            placeholder="Filtrar por área"
             class="w-full min-w-0 rounded-[24px] border border-shell-border bg-white px-4 py-3 text-sm text-ink placeholder:text-ink-faint shadow-[0_8px_24px_rgba(23,38,61,0.05)] transition duration-150 focus:border-brand/40 focus:outline-none focus:shadow-[0_12px_28px_rgba(34,84,140,0.10)]"
           />
         </label>

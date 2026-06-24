@@ -16,8 +16,8 @@ export default function OperationsPage(props: OperationsPageProps) {
     <div class="grid gap-5 xl:grid-cols-3">
       <SectionCard eyebrow="Carga inicial" title="Importar desde Excel de RR.HH." class="xl:col-span-1">
         <p class="text-sm leading-7 text-ink-soft">
-          Descarga la plantilla nueva o importa el libro de RR.HH. con varias hojas. Si el numero de legajo ya existe,
-          la fila actualizara el registro y conservara la trazabilidad.
+          Descarga la plantilla nueva o importa el libro de RR.HH. con varias hojas. Si el número de legajo ya existe,
+          la fila actualizará el registro y conservará la trazabilidad.
         </p>
         <div class="mt-6 flex flex-wrap gap-3">
           <ActionButton variant="secondary" onClick={props.onSaveTemplate}>
@@ -28,13 +28,13 @@ export default function OperationsPage(props: OperationsPageProps) {
           </ActionButton>
         </div>
         <div class="mt-6 rounded-3xl border border-dashed border-shell-border bg-white/60 p-4 text-sm text-ink-soft">
-          {props.importSummary ?? "Aun no se ha realizado una importacion en esta sesion. La plantilla ahora incluye tipo de contrato y columnas comunes entre hojas."}
+          {props.importSummary ?? "Aún no se ha realizado una importación en esta sesión. La plantilla ahora incluye tipo de contrato y columnas comunes entre hojas."}
         </div>
       </SectionCard>
 
       <SectionCard eyebrow="Salida administrativa" title="Exportaciones normativas" class="xl:col-span-1">
         <p class="text-sm leading-7 text-ink-soft">
-          Genera la relacion digital completa o filtrada segun el estado actual del padron visible.
+          Genera la relación digital completa o filtrada según el estado actual del padrón visible.
         </p>
         <div class="mt-6 grid gap-3">
           <ActionButton variant="secondary" onClick={() => props.onExport("xlsx")}>
@@ -60,8 +60,8 @@ export default function OperationsPage(props: OperationsPageProps) {
           </ActionButton>
         </div>
         <div class="mt-6 rounded-3xl border border-shell-border bg-brand/5 p-4 text-sm text-ink-soft">
-          La exportacion y el respaldo siguen usando el flujo Tauri actual. La importacion ahora entiende libros de
-          RR.HH. con varias hojas, fechas numericas de Excel y el tipo de contrato por hoja.
+          La exportación y el respaldo siguen usando el flujo Tauri actual. La importación ahora entiende libros de
+          RR.HH. con varias hojas, fechas numéricas de Excel y el tipo de contrato por hoja.
         </div>
       </SectionCard>
     </div>

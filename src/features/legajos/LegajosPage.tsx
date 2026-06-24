@@ -55,7 +55,7 @@ export default function LegajosPage(props: LegajosPageProps) {
   const columns = createMemo<ColumnDef<LegajoSummary, unknown>[]>(() => [
     {
       accessorKey: "numero_legajo",
-      header: sortButton("Numero", "numero_legajo", sort(), setSort),
+      header: sortButton("Número", "numero_legajo", sort(), setSort),
       cell: (context) => (
         <div>
           <div class="inline-flex rounded-2xl border border-shell-border bg-white/82 px-3 py-2 font-semibold text-brand-deep">
@@ -83,11 +83,11 @@ export default function LegajosPage(props: LegajosPageProps) {
     },
     {
       accessorKey: "organo_unidad",
-      header: sortButton("Area", "organo_unidad", sort(), setSort),
+      header: sortButton("Área", "organo_unidad", sort(), setSort),
       cell: (context) => (
         <div>
           <div class="font-medium text-ink">{context.row.original.organo_unidad}</div>
-          <div class="text-xs text-ink-soft">Area de trabajo</div>
+          <div class="text-xs text-ink-soft">Área de trabajo</div>
         </div>
       )
     },
@@ -112,7 +112,7 @@ export default function LegajosPage(props: LegajosPageProps) {
     },
     {
       accessorKey: "ubicacion_legajo",
-      header: sortButton("Ubicacion", "ubicacion_legajo", sort(), setSort),
+      header: sortButton("Ubicación", "ubicacion_legajo", sort(), setSort),
       cell: (context) => (
         <div>
           <div class="font-medium text-ink">{context.row.original.ubicacion_legajo || "Sin ubicacion"}</div>
@@ -265,9 +265,9 @@ function compareValues(left: unknown, right: unknown, key: SortKey) {
 
 function activeFilterChips(filters: Filters, sort: { key: SortKey; direction: "asc" | "desc" }) {
   const chips = [];
-  if (filters.search) chips.push({ label: "Busqueda", value: filters.search });
+    if (filters.search) chips.push({ label: "Búsqueda", value: filters.search });
   if (filters.estado !== "todos") chips.push({ label: "Estado", value: filters.estado });
-  if (filters.organo_unidad) chips.push({ label: "Area", value: filters.organo_unidad });
+  if (filters.organo_unidad) chips.push({ label: "Área", value: filters.organo_unidad });
   if (filters.regimen_laboral) chips.push({ label: "Tipo de contrato", value: filters.regimen_laboral });
   chips.push({
     label: "Orden",
@@ -278,16 +278,16 @@ function activeFilterChips(filters: Filters, sort: { key: SortKey; direction: "a
 
 function humanizeSortKey(value: SortKey) {
   const labels: Record<SortKey, string> = {
-    numero_legajo: "Numero de legajo",
+    numero_legajo: "Número de legajo",
     apellidos_nombres: "Nombre",
     dni: "DNI",
-    organo_unidad: "Area",
+    organo_unidad: "Área",
     cargo_puesto: "Cargo",
     regimen_laboral: "Tipo de contrato",
     estado_legajo: "Estado",
-    ubicacion_legajo: "Ubicacion",
+    ubicacion_legajo: "Ubicación",
     total_adjuntos: "Adjuntos",
-    updated_at: "Actualizacion"
+    updated_at: "Actualización"
   };
 
   return labels[value];

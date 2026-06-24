@@ -46,25 +46,20 @@ export default function LegajoDetailPanel(props: LegajoDetailPanelProps) {
         <div class="grid gap-5">
           <article class="rounded-card border border-shell-border bg-[radial-gradient(circle_at_top_right,rgba(86,193,207,0.20),transparent_24%),linear-gradient(135deg,rgba(255,255,255,0.985)_0%,rgba(245,237,226,0.97)_100%)] p-6 shadow-card">
             <div class="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
-              <div class="flex flex-1 gap-4">
-                <div class="grid h-16 w-16 place-items-center rounded-3xl bg-brand-gradient text-lg font-bold text-white shadow-glow">
-                  {getInitials(detail().apellidos_nombres)}
-                </div>
-                <div class="min-w-0">
-                  <p class="text-[11px] uppercase tracking-[0.22em] text-ink-soft">Legajo {detail().numero_legajo}</p>
-                  <h3 class="mt-2 font-display text-3xl font-semibold tracking-[-0.04em] text-ink">
-                    {detail().apellidos_nombres}
-                  </h3>
-                  <p class="mt-2 text-sm leading-6 text-ink-soft">
-                    {detail().cargo_puesto} - {detail().organo_unidad}
-                  </p>
-                  <div class="mt-5 flex flex-wrap gap-2">
-                    <RecordChip label="DNI" value={detail().dni} />
-                    <RecordChip label="Tipo de contrato" value={detail().regimen_laboral} />
-                    <RecordChip label="Edad" value={formatAge(detail().fecha_nacimiento)} />
-                    <RecordChip label="Alta" value={formatDate(detail().fecha_vinculacion)} />
-                    <StatusPill value={detail().estado_legajo} />
-                  </div>
+              <div class="min-w-0 flex-1">
+                <p class="text-[11px] uppercase tracking-[0.22em] text-ink-soft">Legajo {detail().numero_legajo}</p>
+                <h3 class="mt-2 font-display text-3xl font-semibold tracking-[-0.04em] text-ink">
+                  {detail().apellidos_nombres}
+                </h3>
+                <p class="mt-2 text-sm leading-6 text-ink-soft">
+                  {detail().cargo_puesto} - {detail().organo_unidad}
+                </p>
+                <div class="mt-5 flex flex-wrap gap-2">
+                  <RecordChip label="DNI" value={detail().dni} />
+                  <RecordChip label="Tipo de contrato" value={detail().regimen_laboral} />
+                  <RecordChip label="Edad" value={formatAge(detail().fecha_nacimiento)} />
+                  <RecordChip label="Alta" value={formatDate(detail().fecha_vinculacion)} />
+                  <StatusPill value={detail().estado_legajo} />
                 </div>
               </div>
 
@@ -93,26 +88,26 @@ export default function LegajoDetailPanel(props: LegajoDetailPanelProps) {
 
             <Tabs.Content value="resumen" class="pt-5">
               <div class="grid gap-4 md:grid-cols-2">
-                <DetailItem label="Numero de legajo" value={detail().numero_legajo} />
+                <DetailItem label="Número de legajo" value={detail().numero_legajo} />
                 <DetailItem label="Documento de identidad" value={detail().dni} />
-                <DetailItem label="Area de trabajo" value={detail().organo_unidad} />
-                <DetailItem label="Cargo/Puesto" value={detail().cargo_puesto} />
+                <DetailItem label="Área de trabajo" value={detail().organo_unidad} />
+                <DetailItem label="Cargo / puesto" value={detail().cargo_puesto} />
                 <DetailItem label="Tipo de contrato" value={detail().regimen_laboral} />
                 <DetailItem label="Fecha de nacimiento" value={formatDate(detail().fecha_nacimiento)} />
                 <DetailItem label="Edad actual" value={formatAge(detail().fecha_nacimiento)} />
-                <DetailItem label="Fecha de vinculacion" value={formatDate(detail().fecha_vinculacion)} />
-                <DetailItem label="Remuneracion" value={detail().remuneracion} />
+                <DetailItem label="Fecha de vinculación" value={formatDate(detail().fecha_vinculacion)} />
+                <DetailItem label="Remuneración" value={detail().remuneracion} />
                 <DetailItem label="Celular" value={detail().celular} />
-                <DetailItem label="Direccion" value={detail().direccion} />
-                <DetailItem label="Categoria de estudios" value={detail().categoria_estudios} />
-                <DetailItem label="Correo electronico" value={detail().correo_electronico} />
+                <DetailItem label="Dirección" value={detail().direccion} />
+                <DetailItem label="Categoría de estudios" value={detail().categoria_estudios} />
+                <DetailItem label="Correo electrónico" value={detail().correo_electronico} />
                 <DetailItem label="Perfil MOF" value={detail().perfil_mof} />
                 <DetailItem label="Hijos menores de edad" value={detail().hijos_menores_de_edad} />
-                <DetailItem label="Condicion" value={detail().condicion} />
+                <DetailItem label="Condición" value={detail().condicion} />
                 <DetailItem label="Estado" value={detail().estado_legajo} />
-                <DetailItem label="Ubicacion del legajo" value={detail().ubicacion_legajo} />
+                <DetailItem label="Ubicación del legajo" value={detail().ubicacion_legajo} />
                 <DetailItem label="Origen del registro" value={detail().origen_registro} />
-                <DetailItem label="Ultima actualizacion" value={formatDateTime(detail().updated_at)} />
+                <DetailItem label="Última actualización" value={formatDateTime(detail().updated_at)} />
               </div>
 
               <div class="mt-4 rounded-3xl border border-shell-border bg-white/88 p-4">
@@ -127,7 +122,7 @@ export default function LegajoDetailPanel(props: LegajoDetailPanelProps) {
                 fallback={
                   <div class="grid gap-4">
                     <div class="rounded-3xl border border-shell-border bg-white/84 p-5 text-sm leading-7 text-ink-soft">
-                      Aun no se ha digitalizado evidencia para este legajo.
+                      Aún no se ha digitalizado evidencia para este legajo.
                     </div>
                     <div class="overflow-hidden rounded-card border border-shell-border bg-white/88 shadow-card">
                       <AttachmentPreview attachment={null} />
@@ -297,23 +292,11 @@ function formatAge(value: string) {
 
 function humanizeMovement(type: string) {
   const labels: Record<string, string> = {
-    creacion: "Creacion",
-    edicion: "Edicion",
+    creacion: "Creación",
+    edicion: "Edición",
     cambio_estado: "Cambio de estado",
-    cambio_ubicacion: "Cambio de ubicacion",
+    cambio_ubicacion: "Cambio de ubicación",
     adjunto: "Adjunto"
   };
   return labels[type] || type;
-}
-
-function getInitials(value: string) {
-  return (
-    value
-      .trim()
-      .split(/\s+/)
-      .filter(Boolean)
-      .slice(0, 2)
-      .map((part) => part[0]?.toUpperCase() || "")
-      .join("") || "RH"
-  );
 }

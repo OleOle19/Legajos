@@ -116,7 +116,7 @@ export default function LegajoFormDialog(props: LegajoFormDialogProps) {
                       {props.current ? "Editar legajo" : "Nuevo legajo"}
                     </Dialog.Title>
                     <p class="mt-3 max-w-3xl text-sm leading-6 text-ink-soft">
-                      Completa los datos base del servidor o servidora, el tipo de contrato y la informacion que
+                      Completa los datos base del servidor o servidora, el tipo de contrato y la información que
                       antes quedaba repartida entre hojas del Excel.
                     </p>
                   </div>
@@ -128,9 +128,9 @@ export default function LegajoFormDialog(props: LegajoFormDialogProps) {
 
                 <div class="mt-5 grid gap-3 sm:grid-cols-3">
                   <HeaderBadge
-                    label="Numero de legajo"
+                    label="Número de legajo"
                     value={form.numero_legajo || "pendiente"}
-                    note="Se calcula segun el tipo de contrato"
+                    note="Se calcula según el tipo de contrato"
                   />
                   <HeaderBadge
                     label="Tipo de contrato"
@@ -139,7 +139,7 @@ export default function LegajoFormDialog(props: LegajoFormDialogProps) {
                   />
                   <HeaderBadge
                     label="Edad"
-                    value={agePreview() === null ? "pendiente" : `${agePreview()} anios`}
+                    value={agePreview() === null ? "pendiente" : `${agePreview()} años`}
                     note={form.fecha_nacimiento ? "Se calcula al guardar" : "Falta fecha de nacimiento"}
                   />
                 </div>
@@ -155,14 +155,14 @@ export default function LegajoFormDialog(props: LegajoFormDialogProps) {
               >
                 <div class="min-h-0 flex-1 overflow-y-auto px-6 pb-4 pt-5 sm:px-7">
                   <div class="grid gap-5">
-                    <FormSection title="Identidad y vinculo" eyebrow="Datos base">
+                    <FormSection title="Identidad y vínculo" eyebrow="Datos base">
                       <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                         <TextField
-                          label="Numero de legajo"
+                          label="Número de legajo"
                           value={form.numero_legajo}
                           onInput={(value) => update("numero_legajo", value)}
                           readOnly
-                          helper="Se genera automaticamente segun el contrato."
+                          helper="Se genera automáticamente según el contrato."
                         />
                         <TextField
                           label="Apellidos y nombres"
@@ -177,7 +177,7 @@ export default function LegajoFormDialog(props: LegajoFormDialogProps) {
                           onInput={(value) => update("fecha_nacimiento", value)}
                         />
                         <DateField
-                          label="Fecha de vinculacion"
+                          label="Fecha de vinculación"
                           value={form.fecha_vinculacion}
                           onInput={(value) => update("fecha_vinculacion", value)}
                           required
@@ -194,22 +194,22 @@ export default function LegajoFormDialog(props: LegajoFormDialogProps) {
                     </FormSection>
 
                     <div class="grid gap-5 xl:grid-cols-2">
-                      <FormSection title="Area de trabajo" eyebrow="Ubicacion laboral">
+                    <FormSection title="Área de trabajo" eyebrow="Ubicación laboral">
                         <div class="grid gap-4">
                           <SelectField
-                            label="Area"
+                            label="Área"
                             value={form.organo_unidad}
                             onInput={(value) => update("organo_unidad", value)}
                             options={areaOptions()}
-                            placeholder="Selecciona un area"
+                            placeholder="Selecciona un área"
                             required
                           />
-                          <div class="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto]">
+                          <div class="grid gap-3 xl:grid-cols-[minmax(0,1fr)_auto]">
                             <TextField
-                              label="Nueva area"
+                              label="Nueva área"
                               value={areaDraft()}
                               onInput={setAreaDraft}
-                              placeholder="Ej: Gestion Documental"
+                              placeholder="Ej: Gestión Documental"
                             />
                             <div class="flex items-end">
                               <ActionButton
@@ -218,7 +218,7 @@ export default function LegajoFormDialog(props: LegajoFormDialogProps) {
                                 onClick={createAreaFromDraft}
                                 disabled={!areaDraft().trim()}
                               >
-                                Crear area
+                                Crear área
                               </ActionButton>
                             </div>
                           </div>
@@ -226,16 +226,16 @@ export default function LegajoFormDialog(props: LegajoFormDialogProps) {
                             label="Cargo / puesto"
                             value={form.cargo_puesto}
                             onInput={(value) => update("cargo_puesto", value)}
-                            placeholder="Opcional: si lo dejas vacio se usara el area"
-                            helper="Si no se completa, el sistema guarda el area como cargo base."
+                            placeholder="Opcional: si lo dejas vacío se usará el área"
+                            helper="Si no se completa, el sistema guarda el área como cargo base."
                           />
                           <TextField
-                            label="Categoria de estudios"
+                            label="Categoría de estudios"
                             value={form.categoria_estudios}
                             onInput={(value) => update("categoria_estudios", value)}
                           />
                           <TextField
-                            label="Condicion"
+                            label="Condición"
                             value={form.condicion}
                             onInput={(value) => update("condicion", value)}
                             placeholder="Ej: Nombrado, contratado, CAS, etc."
@@ -243,10 +243,10 @@ export default function LegajoFormDialog(props: LegajoFormDialogProps) {
                         </div>
                       </FormSection>
 
-                      <FormSection title="Contacto y remuneracion" eyebrow="Datos complementarios">
+                      <FormSection title="Contacto y remuneración" eyebrow="Datos complementarios">
                         <div class="grid gap-4">
                           <TextField
-                            label="Remuneracion"
+                            label="Remuneración"
                             value={form.remuneracion}
                             onInput={(value) => update("remuneracion", value)}
                             placeholder="Monto o referencia salarial"
@@ -257,12 +257,12 @@ export default function LegajoFormDialog(props: LegajoFormDialogProps) {
                             onInput={(value) => update("celular", value)}
                           />
                           <TextField
-                            label="Direccion"
+                            label="Dirección"
                             value={form.direccion}
                             onInput={(value) => update("direccion", value)}
                           />
                           <TextField
-                            label="Correo electronico"
+                            label="Correo electrónico"
                             value={form.correo_electronico}
                             onInput={(value) => update("correo_electronico", value)}
                           />
@@ -274,7 +274,7 @@ export default function LegajoFormDialog(props: LegajoFormDialogProps) {
                       <FormSection title="Perfil y control" eyebrow="Archivo y trazabilidad">
                         <div class="grid gap-4">
                           <TextAreaField
-                            label="Perfil solicitado segun el MOF"
+                            label="Perfil solicitado según el MOF"
                             value={form.perfil_mof}
                             onInput={(value) => update("perfil_mof", value)}
                             rows={5}
@@ -289,7 +289,7 @@ export default function LegajoFormDialog(props: LegajoFormDialogProps) {
                         </div>
                       </FormSection>
 
-                      <FormSection title="Custodia fisica" eyebrow="Archivo administrativo">
+                      <FormSection title="Custodia física" eyebrow="Archivo administrativo">
                         <div class="grid gap-4">
                           <SelectField
                             label="Estado del legajo"
@@ -299,7 +299,7 @@ export default function LegajoFormDialog(props: LegajoFormDialogProps) {
                             required
                           />
                           <TextField
-                            label="Ubicacion del legajo"
+                            label="Ubicación del legajo"
                             value={form.ubicacion_legajo}
                             onInput={(value) => update("ubicacion_legajo", value)}
                             required
@@ -369,7 +369,7 @@ function TextField(props: {
   readOnly?: boolean;
 }) {
   return (
-    <label class="grid self-start gap-2.5 text-sm">
+    <label class="grid min-w-0 self-start gap-2.5 text-sm">
       <span class="pl-1 font-medium text-ink">{props.label}</span>
       <input
         required={props.required}
@@ -377,7 +377,7 @@ function TextField(props: {
         value={props.value}
         placeholder={props.placeholder}
         onInput={(event) => props.onInput(event.currentTarget.value)}
-        class="rounded-3xl border border-shell-border bg-white/92 px-4 py-3 text-ink outline-none transition duration-150 placeholder:text-ink-faint focus:border-brand/35 focus:ring-2 focus:ring-brand-accent/20 read-only:bg-[#f7f5f2] read-only:text-ink-soft"
+        class="w-full min-w-0 overflow-hidden text-ellipsis whitespace-nowrap rounded-3xl border border-shell-border bg-white/92 px-4 py-3 text-ink outline-none transition duration-150 placeholder:text-ink-faint focus:border-brand/35 focus:ring-2 focus:ring-brand-accent/20 read-only:bg-[#f7f5f2] read-only:text-ink-soft"
       />
       <ShowText when={props.helper}>{props.helper}</ShowText>
     </label>
@@ -386,14 +386,14 @@ function TextField(props: {
 
 function DateField(props: { label: string; value: string; onInput: (value: string) => void; required?: boolean }) {
   return (
-    <label class="grid self-start gap-2.5 text-sm">
+    <label class="grid min-w-0 self-start gap-2.5 text-sm">
       <span class="pl-1 font-medium text-ink">{props.label}</span>
       <input
         required={props.required}
         type="date"
         value={props.value}
         onInput={(event) => props.onInput(event.currentTarget.value)}
-        class="rounded-3xl border border-shell-border bg-white/92 px-4 py-3 text-ink outline-none transition duration-150 focus:border-brand/35 focus:ring-2 focus:ring-brand-accent/20"
+        class="w-full min-w-0 rounded-3xl border border-shell-border bg-white/92 px-4 py-3 text-ink outline-none transition duration-150 focus:border-brand/35 focus:ring-2 focus:ring-brand-accent/20"
       />
     </label>
   );
@@ -431,14 +431,14 @@ function TextAreaField(props: {
   placeholder?: string;
 }) {
   return (
-    <label class="grid gap-2.5 text-sm">
+    <label class="grid min-w-0 gap-2.5 text-sm">
       <span class="pl-1 font-medium text-ink">{props.label}</span>
       <textarea
         rows={props.rows ?? 4}
         value={props.value}
         placeholder={props.placeholder}
         onInput={(event) => props.onInput(event.currentTarget.value)}
-        class="min-h-[140px] rounded-3xl border border-shell-border bg-white/92 px-4 py-3 text-ink outline-none transition duration-150 placeholder:text-ink-faint focus:border-brand/35 focus:ring-2 focus:ring-brand-accent/20"
+        class="min-h-[140px] w-full min-w-0 resize-y rounded-3xl border border-shell-border bg-white/92 px-4 py-3 text-ink outline-none transition duration-150 placeholder:text-ink-faint focus:border-brand/35 focus:ring-2 focus:ring-brand-accent/20"
       />
     </label>
   );
