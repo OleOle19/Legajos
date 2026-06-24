@@ -25,6 +25,7 @@ type SortKey =
 interface LegajosPageProps {
   filters: Filters;
   legajos: LegajoSummary[];
+  birthdayReminderIds: number[];
   stats: { total: number; activos: number; pasivos: number };
   selectedLegajoId: number | null;
   detail?: LegajoDetail | null;
@@ -187,10 +188,11 @@ export default function LegajosPage(props: LegajosPageProps) {
             </For>
           </div>
 
-          <DataGrid
+        <DataGrid
             data={sortedRows()}
             columns={columns()}
             selectedRowId={props.selectedLegajoId}
+            highlightedRowIds={props.birthdayReminderIds}
             getRowId={(row) => String(row.id)}
             onRowClick={(row) => props.onSelectLegajo(row.id)}
             emptyTitle="Sin coincidencias visibles"

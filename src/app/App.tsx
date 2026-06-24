@@ -136,6 +136,7 @@ export default function App() {
   const visibleLegajos = createMemo(() => collectionQuery.data?.legajos ?? bootstrapQuery.data?.legajos ?? []);
   const currentAreas = createMemo(() => bootstrapQuery.data?.areas ?? []);
   const birthdayReminders = createMemo(() => getBirthdayReminders(allLegajos(), 7));
+  const birthdayReminderIds = createMemo(() => birthdayReminders().map((item) => item.id));
 
   const openNewLegajo = () => {
     setEditingLegajo(null);
@@ -197,6 +198,7 @@ export default function App() {
                 selectedLegajoId={selectedLegajoId()}
                 detail={detailQuery.data}
                 selectedAttachmentId={selectedAttachmentId()}
+                birthdayReminderIds={birthdayReminderIds()}
                 onFiltersChange={setFilters}
                 onSelectLegajo={(id) => navigate(`/legajos/${id}`)}
                 onSelectAttachment={setSelectedAttachmentId}

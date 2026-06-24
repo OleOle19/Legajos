@@ -12,6 +12,7 @@ interface DataGridProps<TData> {
   data: TData[];
   columns: ColumnDef<TData, unknown>[];
   selectedRowId?: number | null;
+  highlightedRowIds?: number[];
   getRowId: (row: TData) => string;
   onRowClick?: (row: TData) => void;
   emptyTitle: string;
@@ -29,6 +30,7 @@ export default function DataGrid<TData>(props: DataGridProps<TData>) {
     getCoreRowModel: getCoreRowModel(),
     getRowId: props.getRowId
   });
+  const highlightedRowIds = new Set(props.highlightedRowIds ?? []);
 
   return (
     <div class="overflow-auto rounded-card border border-shell-border bg-white/84 shadow-card">
@@ -69,6 +71,7 @@ export default function DataGrid<TData>(props: DataGridProps<TData>) {
                 <DataGridRow
                   row={row}
                   selectedRowId={props.selectedRowId}
+                  highlightedRowIds={highlightedRowIds}
                   onClick={() => props.onRowClick?.(row.original)}
                 />
               )}
@@ -83,14 +86,17 @@ export default function DataGrid<TData>(props: DataGridProps<TData>) {
 function DataGridRow<TData>(props: {
   row: Row<TData>;
   selectedRowId?: number | null;
+  highlightedRowIds: Set<number>;
   onClick?: () => void;
 }) {
   const isSelected = () => String(props.selectedRowId ?? "") === props.row.id;
+  const isHighlighted = () => props.highlightedRowIds.has(Number(props.row.id));
 
   return (
     <tr
       class={cn(
         "cursor-pointer border-b border-shell-border/70 transition duration-150 hover:bg-brand/5",
+        isHighlighted() && !isSelected() && "bg-[#fff7db] shadow-[inset_4px_0_0_rgb(234_179_8)]",
         isSelected() && "bg-brand/5 shadow-[inset_4px_0_0_rgb(34_84_140)]"
       )}
       onClick={props.onClick}
