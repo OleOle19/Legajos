@@ -83,11 +83,11 @@ export default function LegajosPage(props: LegajosPageProps) {
     },
     {
       accessorKey: "organo_unidad",
-      header: sortButton("Unidad", "organo_unidad", sort(), setSort),
+      header: sortButton("Area", "organo_unidad", sort(), setSort),
       cell: (context) => (
         <div>
           <div class="font-medium text-ink">{context.row.original.organo_unidad}</div>
-          <div class="text-xs text-ink-soft">Unidad organica</div>
+          <div class="text-xs text-ink-soft">Area de trabajo</div>
         </div>
       )
     },
@@ -267,7 +267,7 @@ function activeFilterChips(filters: Filters, sort: { key: SortKey; direction: "a
   const chips = [];
   if (filters.search) chips.push({ label: "Busqueda", value: filters.search });
   if (filters.estado !== "todos") chips.push({ label: "Estado", value: filters.estado });
-  if (filters.organo_unidad) chips.push({ label: "Unidad", value: filters.organo_unidad });
+  if (filters.organo_unidad) chips.push({ label: "Area", value: filters.organo_unidad });
   if (filters.regimen_laboral) chips.push({ label: "Tipo de contrato", value: filters.regimen_laboral });
   chips.push({
     label: "Orden",
@@ -281,7 +281,7 @@ function humanizeSortKey(value: SortKey) {
     numero_legajo: "Numero de legajo",
     apellidos_nombres: "Nombre",
     dni: "DNI",
-    organo_unidad: "Unidad",
+    organo_unidad: "Area",
     cargo_puesto: "Cargo",
     regimen_laboral: "Tipo de contrato",
     estado_legajo: "Estado",

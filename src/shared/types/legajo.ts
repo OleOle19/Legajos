@@ -132,6 +132,7 @@ export interface StorageSummary {
 export interface BootstrapResponse {
   stats: DashboardStats;
   legajos: LegajoSummary[];
+  areas: string[];
   storage: StorageSummary;
 }
 

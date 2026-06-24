@@ -4,6 +4,7 @@ import type { Filters, SaveLegajoPayload } from "@/shared/types/legajo";
 export const legajoApi = {
   addAttachment: (legajoId: number) => legajoBridge.addAttachment(legajoId),
   bootstrap: () => legajoBridge.bootstrap(),
+  createArea: (areaName: string) => legajoBridge.createArea(areaName),
   createBackup: () => legajoBridge.createBackup(),
   exportLegajos: (format: "pdf" | "xlsx", filters: Partial<Filters>) =>
     legajoBridge.exportLegajos(format, filters),
@@ -14,4 +15,3 @@ export const legajoApi = {
   saveLegajo: (payload: SaveLegajoPayload) => legajoBridge.saveLegajo(payload),
   saveTemplate: () => legajoBridge.saveTemplate()
 };
-

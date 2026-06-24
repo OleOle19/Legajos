@@ -242,6 +242,7 @@ struct StorageSummary {
 struct BootstrapResponse {
     stats: DashboardStats,
     legajos: Vec<LegajoSummary>,
+    areas: Vec<String>,
     storage: StorageSummary,
 }
 
@@ -331,6 +332,8 @@ pub fn run() {
             list_legajos,
             get_legajo_detail,
             save_legajo,
+            list_areas,
+            create_area,
             add_attachment,
             open_attachment,
             create_backup,
@@ -348,6 +351,7 @@ fn bootstrap(state: tauri::State<'_, AppState>) -> Result<BootstrapResponse, Str
     Ok(BootstrapResponse {
         stats: get_dashboard_stats(&connection)?,
         legajos: list_legajos_internal(&connection, &Filters::default())?,
+        areas: list_areas_internal(&connection)?,
         storage: state.storage_summary(),
     })
 }
@@ -372,6 +376,18 @@ fn get_legajo_detail(
 ) -> Result<LegajoDetail, String> {
     let connection = open_connection(&state)?;
     get_legajo_detail_internal(&connection, legajo_id).map_err(error_message)
+}
+
+#[tauri::command]
+fn list_areas(state: tauri::State<'_, AppState>) -> Result<Vec<String>, String> {
+    let connection = open_connection(&state)?;
+    list_areas_internal(&connection)
+}
+
+#[tauri::command]
+fn create_area(area_name: String, state: tauri::State<'_, AppState>) -> Result<String, String> {
+    let connection = open_connection(&state)?;
+    create_area_internal(&connection, &area_name).map_err(error_message)
 }
 
 #[tauri::command]
@@ -594,10 +610,62 @@ fn initialize_schema(connection: &Connection) -> Result<()> {
       ruta_interna TEXT NOT NULL,
       fecha_carga TEXT NOT NULL
     );
+
+    CREATE TABLE IF NOT EXISTS areas (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      nombre TEXT NOT NULL UNIQUE COLLATE NOCASE,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
     "#,
     )?;
     ensure_legajo_columns(connection)?;
+    seed_area_catalog(connection)?;
     Ok(())
+}
+
+fn seed_area_catalog(connection: &Connection) -> Result<()> {
+    let stamp = now_iso();
+    connection.execute(
+        r#"
+        INSERT OR IGNORE INTO areas (nombre, created_at, updated_at)
+        SELECT DISTINCT TRIM(organo_unidad), ?, ?
+        FROM legajos
+        WHERE TRIM(organo_unidad) <> ''
+        "#,
+        params![&stamp, &stamp],
+    )?;
+    Ok(())
+}
+
+fn list_areas_internal(connection: &Connection) -> Result<Vec<String>, String> {
+    let mut statement = connection
+        .prepare("SELECT nombre FROM areas ORDER BY nombre COLLATE NOCASE ASC")
+        .map_err(error_message)?;
+    let items = statement
+        .query_map([], |row| row.get::<_, String>(0))
+        .map_err(error_message)?
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(error_message)?;
+    Ok(items)
+}
+
+fn create_area_internal(connection: &Connection, raw_name: &str) -> Result<String> {
+    let name = raw_name.trim();
+    if name.is_empty() {
+        return Err(anyhow!("El nombre del area no puede estar vacio."));
+    }
+
+    let stamp = now_iso();
+    connection.execute(
+        r#"
+        INSERT INTO areas (nombre, created_at, updated_at)
+        VALUES (?, ?, ?)
+        ON CONFLICT(nombre) DO UPDATE SET updated_at = excluded.updated_at
+        "#,
+        params![name, &stamp, &stamp],
+    )?;
+    Ok(name.to_string())
 }
 
 fn ensure_legajo_columns(connection: &Connection) -> Result<()> {
@@ -820,7 +888,11 @@ fn save_legajo_internal(
     connection: &mut Connection,
     payload: SaveLegajoPayload,
 ) -> Result<LegajoDetail> {
-    let sanitized = sanitize_legajo_payload(payload)?;
+    let mut sanitized = sanitize_legajo_payload(payload)?;
+    if sanitized.id.is_none() {
+        sanitized.numero_legajo =
+            build_legajo_number(connection, &sanitized.regimen_laboral, &sanitized.numero_legajo)?;
+    }
     let transaction = connection.transaction()?;
     let current = if let Some(id) = sanitized.id {
         transaction
@@ -1659,6 +1731,9 @@ fn sanitize_legajo_payload(mut payload: SaveLegajoPayload) -> Result<SaveLegajoP
     payload.dni = payload.dni.trim().to_string();
     payload.organo_unidad = payload.organo_unidad.trim().to_string();
     payload.cargo_puesto = payload.cargo_puesto.trim().to_string();
+    if payload.cargo_puesto.is_empty() {
+        payload.cargo_puesto = payload.organo_unidad.clone();
+    }
     payload.regimen_laboral = normalize_contract_type(&payload.regimen_laboral);
     payload.fecha_nacimiento = normalize_date_input(&payload.fecha_nacimiento);
     payload.fecha_vinculacion = normalize_date_input(&payload.fecha_vinculacion);
@@ -1786,6 +1861,62 @@ fn normalize_contract_type(value: &str) -> String {
         "casconfianza" | "dlcasconfianza" | "confianza" => "CAS - Confianza".to_string(),
         "casnecesidad" | "dlcasnecesidad" | "necesidad" => "CAS - Necesidad".to_string(),
         _ => text.to_string(),
+    }
+}
+
+fn build_legajo_number(
+    connection: &Connection,
+    contract_type: &str,
+    current_value: &str,
+) -> Result<String> {
+    let normalized_contract = normalize_contract_type(contract_type);
+    let prefix = contract_prefix(&normalized_contract);
+    let current = current_value.trim();
+
+    if !current.is_empty() && current.starts_with(&prefix) {
+        return Ok(current.to_string());
+    }
+
+    let mut statement = connection.prepare("SELECT numero_legajo FROM legajos WHERE regimen_laboral = ?")?;
+    let numbers = statement.query_map(params![&normalized_contract], |row| row.get::<_, String>(0))?;
+
+    let mut max_sequence = 0_i64;
+    for item in numbers {
+        let value = item?;
+        if let Some(sequence) = parse_legajo_sequence(&value) {
+            max_sequence = max_sequence.max(sequence);
+        }
+    }
+
+    Ok(format!("{}-{:04}", prefix, max_sequence + 1))
+}
+
+fn contract_prefix(contract_type: &str) -> String {
+    match normalize_contract_type(contract_type).as_str() {
+        "DL 276" => "DL276".to_string(),
+        "DL 728 - Serenos" => "DL728S".to_string(),
+        "DL 728 - Obreros" => "DL728O".to_string(),
+        "CAS" => "CAS".to_string(),
+        "CAS - Confianza" => "CASC".to_string(),
+        "CAS - Necesidad" => "CASN".to_string(),
+        other => normalize_header(other).to_uppercase(),
+    }
+}
+
+fn parse_legajo_sequence(value: &str) -> Option<i64> {
+    let digits = value
+        .chars()
+        .rev()
+        .take_while(|char| char.is_ascii_digit())
+        .collect::<String>()
+        .chars()
+        .rev()
+        .collect::<String>();
+
+    if digits.is_empty() {
+        value.parse::<i64>().ok()
+    } else {
+        digits.parse::<i64>().ok()
     }
 }
 

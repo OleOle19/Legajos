@@ -1,12 +1,16 @@
-import { For, createEffect } from "solid-js";
+import { For, createEffect, createMemo, createSignal } from "solid-js";
 import { createStore } from "solid-js/store";
 import * as Dialog from "@kobalte/core/dialog";
+import { buildNextLegajoNumber, calculateAge } from "@/shared/lib/legajo";
 import { CONTRACT_TYPE_OPTIONS, type LegajoDetail, type SaveLegajoPayload } from "@/shared/types/legajo";
 import ActionButton from "@/shared/ui/ActionButton";
 
 interface LegajoFormDialogProps {
   open: boolean;
   current?: LegajoDetail | null;
+  legajos: Array<Pick<LegajoDetail, "numero_legajo" | "regimen_laboral">>;
+  areas: string[];
+  onCreateArea: (areaName: string) => Promise<string> | string;
   onOpenChange: (open: boolean) => void;
   onSubmit: (payload: SaveLegajoPayload) => Promise<unknown> | unknown;
 }
@@ -35,6 +39,14 @@ const emptyForm = (): SaveLegajoPayload => ({
 
 export default function LegajoFormDialog(props: LegajoFormDialogProps) {
   const [form, setForm] = createStore<SaveLegajoPayload>(emptyForm());
+  const [areaDraft, setAreaDraft] = createSignal("");
+
+  const agePreview = createMemo(() => calculateAge(form.fecha_nacimiento));
+  const areaOptions = createMemo(() => {
+    const options = new Set(props.areas.map((item) => item.trim()).filter(Boolean));
+    if (form.organo_unidad.trim()) options.add(form.organo_unidad.trim());
+    return [...options].sort((left, right) => left.localeCompare(right, "es", { sensitivity: "base" }));
+  });
 
   createEffect(() => {
     const next = props.current
@@ -62,10 +74,30 @@ export default function LegajoFormDialog(props: LegajoFormDialogProps) {
         }
       : emptyForm();
     setForm(next);
+    setAreaDraft("");
+  });
+
+  createEffect(() => {
+    if (props.current) return;
+    const nextLegajo = form.regimen_laboral ? buildNextLegajoNumber(props.legajos, form.regimen_laboral) : "";
+    if (form.numero_legajo !== nextLegajo) {
+      setForm("numero_legajo", nextLegajo);
+    }
   });
 
   const update = <K extends keyof SaveLegajoPayload>(key: K, value: SaveLegajoPayload[K]) => {
     setForm(key, value as never);
+  };
+
+  const createAreaFromDraft = async () => {
+    const name = areaDraft().trim();
+    if (!name) return;
+    const created = await props.onCreateArea(name);
+    const nextArea = String(created || name).trim();
+    if (nextArea) {
+      update("organo_unidad", nextArea);
+      setAreaDraft("");
+    }
   };
 
   return (
@@ -75,7 +107,7 @@ export default function LegajoFormDialog(props: LegajoFormDialogProps) {
 
         <div class="fixed inset-0 z-[71] overflow-hidden p-3 sm:p-4 lg:p-6">
           <div class="flex h-full items-start justify-center">
-            <Dialog.Content class="flex w-full max-w-6xl flex-col overflow-hidden rounded-shell border border-white/75 bg-[radial-gradient(circle_at_top_right,rgba(86,193,207,0.12),transparent_22%),linear-gradient(180deg,rgba(255,252,248,0.995)_0%,rgba(245,237,226,0.98)_100%)] shadow-shell outline-none max-h-full">
+            <Dialog.Content class="flex max-h-full w-full max-w-6xl flex-col overflow-hidden rounded-shell border border-white/75 bg-[radial-gradient(circle_at_top_right,rgba(86,193,207,0.12),transparent_22%),linear-gradient(180deg,rgba(255,252,248,0.995)_0%,rgba(245,237,226,0.98)_100%)] shadow-shell outline-none">
               <div class="border-b border-shell-border/80 px-6 pb-5 pt-6 sm:px-7">
                 <div class="flex items-start justify-between gap-4">
                   <div>
@@ -84,7 +116,7 @@ export default function LegajoFormDialog(props: LegajoFormDialogProps) {
                       {props.current ? "Editar legajo" : "Nuevo legajo"}
                     </Dialog.Title>
                     <p class="mt-3 max-w-3xl text-sm leading-6 text-ink-soft">
-                      Completa los datos base del servidor o servidora, el tipo de contrato y la información que
+                      Completa los datos base del servidor o servidora, el tipo de contrato y la informacion que
                       antes quedaba repartida entre hojas del Excel.
                     </p>
                   </div>
@@ -95,16 +127,20 @@ export default function LegajoFormDialog(props: LegajoFormDialogProps) {
                 </div>
 
                 <div class="mt-5 grid gap-3 sm:grid-cols-3">
-                  <HeaderBadge label="Campos base" value="19" note="Datos comunes del legajo" />
+                  <HeaderBadge
+                    label="Numero de legajo"
+                    value={form.numero_legajo || "pendiente"}
+                    note="Se calcula segun el tipo de contrato"
+                  />
                   <HeaderBadge
                     label="Tipo de contrato"
                     value={form.regimen_laboral || "pendiente"}
                     note="CAS, obreros, serenos, 276"
                   />
                   <HeaderBadge
-                    label="Ubicacion"
-                    value={form.ubicacion_legajo ? "registrada" : "pendiente"}
-                    note={form.ubicacion_legajo ? "Archivo o anaquel definido" : "Falta ubicación física"}
+                    label="Edad"
+                    value={agePreview() === null ? "pendiente" : `${agePreview()} anios`}
+                    note={form.fecha_nacimiento ? "Se calcula al guardar" : "Falta fecha de nacimiento"}
                   />
                 </div>
               </div>
@@ -119,13 +155,33 @@ export default function LegajoFormDialog(props: LegajoFormDialogProps) {
               >
                 <div class="min-h-0 flex-1 overflow-y-auto px-6 pb-4 pt-5 sm:px-7">
                   <div class="grid gap-5">
-                    <FormSection title="Identidad y vínculo" eyebrow="Datos base">
+                    <FormSection title="Identidad y vinculo" eyebrow="Datos base">
                       <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                        <TextField label="Numero de legajo" value={form.numero_legajo} onInput={(value) => update("numero_legajo", value)} required />
-                        <TextField label="Apellidos y nombres" value={form.apellidos_nombres} onInput={(value) => update("apellidos_nombres", value)} required />
+                        <TextField
+                          label="Numero de legajo"
+                          value={form.numero_legajo}
+                          onInput={(value) => update("numero_legajo", value)}
+                          readOnly
+                          helper="Se genera automaticamente segun el contrato."
+                        />
+                        <TextField
+                          label="Apellidos y nombres"
+                          value={form.apellidos_nombres}
+                          onInput={(value) => update("apellidos_nombres", value)}
+                          required
+                        />
                         <TextField label="DNI" value={form.dni} onInput={(value) => update("dni", value)} required />
-                        <DateField label="Fecha de nacimiento" value={form.fecha_nacimiento} onInput={(value) => update("fecha_nacimiento", value)} />
-                        <DateField label="Fecha de vinculacion" value={form.fecha_vinculacion} onInput={(value) => update("fecha_vinculacion", value)} required />
+                        <DateField
+                          label="Fecha de nacimiento"
+                          value={form.fecha_nacimiento}
+                          onInput={(value) => update("fecha_nacimiento", value)}
+                        />
+                        <DateField
+                          label="Fecha de vinculacion"
+                          value={form.fecha_vinculacion}
+                          onInput={(value) => update("fecha_vinculacion", value)}
+                          required
+                        />
                         <SelectField
                           label="Tipo de contrato"
                           value={form.regimen_laboral}
@@ -138,19 +194,40 @@ export default function LegajoFormDialog(props: LegajoFormDialogProps) {
                     </FormSection>
 
                     <div class="grid gap-5 xl:grid-cols-2">
-                      <FormSection title="Unidad y puesto" eyebrow="Perfil institucional">
+                      <FormSection title="Area de trabajo" eyebrow="Ubicacion laboral">
                         <div class="grid gap-4">
-                          <TextField
-                            label="Organo o unidad organica"
+                          <SelectField
+                            label="Area"
                             value={form.organo_unidad}
                             onInput={(value) => update("organo_unidad", value)}
+                            options={areaOptions()}
+                            placeholder="Selecciona un area"
                             required
                           />
+                          <div class="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto]">
+                            <TextField
+                              label="Nueva area"
+                              value={areaDraft()}
+                              onInput={setAreaDraft}
+                              placeholder="Ej: Gestion Documental"
+                            />
+                            <div class="flex items-end">
+                              <ActionButton
+                                type="button"
+                                variant="secondary"
+                                onClick={createAreaFromDraft}
+                                disabled={!areaDraft().trim()}
+                              >
+                                Crear area
+                              </ActionButton>
+                            </div>
+                          </div>
                           <TextField
-                            label="Cargo estructural y/o puesto"
+                            label="Cargo / puesto"
                             value={form.cargo_puesto}
                             onInput={(value) => update("cargo_puesto", value)}
-                            required
+                            placeholder="Opcional: si lo dejas vacio se usara el area"
+                            helper="Si no se completa, el sistema guarda el area como cargo base."
                           />
                           <TextField
                             label="Categoria de estudios"
@@ -217,7 +294,7 @@ export default function LegajoFormDialog(props: LegajoFormDialogProps) {
                           <SelectField
                             label="Estado del legajo"
                             value={form.estado_legajo}
-                            onInput={(value) => update("estado_legajo", value as SaveLegajoPayload["estado_legajo"])}
+                            onInput={(value) => update("estado_legajo", value as SaveLegajoPayload["estado_legajo"]) }
                             options={["activo", "pasivo"]}
                             required
                           />
@@ -288,17 +365,21 @@ function TextField(props: {
   onInput: (value: string) => void;
   required?: boolean;
   placeholder?: string;
+  helper?: string;
+  readOnly?: boolean;
 }) {
   return (
     <label class="grid self-start gap-2.5 text-sm">
       <span class="pl-1 font-medium text-ink">{props.label}</span>
       <input
         required={props.required}
+        readOnly={props.readOnly}
         value={props.value}
         placeholder={props.placeholder}
         onInput={(event) => props.onInput(event.currentTarget.value)}
-        class="rounded-3xl border border-shell-border bg-white/92 px-4 py-3 text-ink outline-none transition duration-150 placeholder:text-ink-faint focus:border-brand/35 focus:ring-2 focus:ring-brand-accent/20"
+        class="rounded-3xl border border-shell-border bg-white/92 px-4 py-3 text-ink outline-none transition duration-150 placeholder:text-ink-faint focus:border-brand/35 focus:ring-2 focus:ring-brand-accent/20 read-only:bg-[#f7f5f2] read-only:text-ink-soft"
       />
+      <ShowText when={props.helper}>{props.helper}</ShowText>
     </label>
   );
 }
@@ -361,4 +442,8 @@ function TextAreaField(props: {
       />
     </label>
   );
+}
+
+function ShowText(props: { when?: string; children: any }) {
+  return props.when ? <p class="pl-1 text-xs leading-5 text-ink-soft">{props.children}</p> : null;
 }

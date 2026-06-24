@@ -18,6 +18,7 @@ export interface LegajoBridge {
   addAttachment: (legajoId: number) => Promise<AttachmentResponse>;
   bootstrap: () => Promise<BootstrapResponse>;
   createBackup: () => Promise<BackupResponse>;
+  createArea: (areaName: string) => Promise<string>;
   exportLegajos: (format: "pdf" | "xlsx", filters?: Partial<Filters>) => Promise<ExportResponse>;
   getLegajoDetail: (legajoId: number) => Promise<LegajoDetail>;
   importLegajos: () => Promise<ImportResponse>;
@@ -36,6 +37,7 @@ declare global {
 const createBridge = (): LegajoBridge => ({
   addAttachment: (legajoId) => invoke("add_attachment", { legajoId }),
   bootstrap: () => invoke("bootstrap"),
+  createArea: (areaName) => invoke("create_area", { areaName }),
   createBackup: () => invoke("create_backup"),
   exportLegajos: (format, filters) => invoke("export_legajos", { format, filters }),
   getLegajoDetail: (legajoId) => invoke("get_legajo_detail", { legajoId }),
@@ -52,4 +54,3 @@ export const legajoBridge = (() => {
   }
   return window.legajoAPI;
 })();
-

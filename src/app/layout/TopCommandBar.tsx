@@ -25,7 +25,7 @@ export default function TopCommandBar(props: TopCommandBarProps): JSX.Element {
             <input
               value={props.search}
               onInput={(event) => props.onSearch(event.currentTarget.value)}
-              placeholder="Buscar por legajo, nombre, DNI, unidad o cargo..."
+              placeholder="Buscar por legajo, nombre, DNI, area o cargo..."
               class="w-full bg-transparent text-sm text-ink placeholder:text-ink-soft focus:outline-none"
             />
           </label>

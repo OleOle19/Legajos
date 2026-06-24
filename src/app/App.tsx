@@ -12,17 +12,14 @@ import SidebarRail from "@/app/layout/SidebarRail";
 import TopCommandBar from "@/app/layout/TopCommandBar";
 import { routeLegajoId, routeSection, useHashRoute } from "@/app/router";
 import { legajoApi } from "@/shared/api/legajo";
-import {
-  DEFAULT_FILTERS,
-  type Filters,
-  type LegajoDetail,
-  type SaveLegajoPayload
-} from "@/shared/types/legajo";
+import { DEFAULT_FILTERS, type Filters, type LegajoDetail, type SaveLegajoPayload } from "@/shared/types/legajo";
+import BirthdayNotice from "@/shared/ui/BirthdayNotice";
 import ToastRegion, { type ToastState } from "@/shared/ui/ToastRegion";
 import DashboardPage from "@/features/dashboard/DashboardPage";
 import OperationsPage from "@/features/operaciones/OperationsPage";
 import LegajosPage from "@/features/legajos/LegajosPage";
 import LegajoFormDialog from "@/features/legajos/LegajoFormDialog";
+import { getBirthdayReminders } from "@/shared/lib/legajo";
 
 export default function App() {
   const { route, navigate } = useHashRoute();
@@ -94,6 +91,15 @@ export default function App() {
     onError: (error) => showToast(getErrorMessage(error, "No se pudo adjuntar el archivo."), "danger")
   }));
 
+  const createAreaMutation = createMutation(() => ({
+    mutationFn: (areaName: string) => legajoApi.createArea(areaName),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["bootstrap"] });
+      showToast("Área agregada correctamente.", "success");
+    },
+    onError: (error) => showToast(getErrorMessage(error, "No se pudo crear el área."), "danger")
+  }));
+
   const importMutation = createMutation(() => ({
     mutationFn: () => legajoApi.importLegajos(),
     onSuccess: async (response) => {
@@ -113,7 +119,10 @@ export default function App() {
   }));
 
   const currentStats = createMemo(() => collectionQuery.data?.stats ?? bootstrapQuery.data?.stats);
-  const currentLegajos = createMemo(() => collectionQuery.data?.legajos ?? bootstrapQuery.data?.legajos ?? []);
+  const allLegajos = createMemo(() => bootstrapQuery.data?.legajos ?? []);
+  const visibleLegajos = createMemo(() => collectionQuery.data?.legajos ?? bootstrapQuery.data?.legajos ?? []);
+  const currentAreas = createMemo(() => bootstrapQuery.data?.areas ?? []);
+  const birthdayReminders = createMemo(() => getBirthdayReminders(allLegajos(), 7));
 
   const openNewLegajo = () => {
     setEditingLegajo(null);
@@ -154,7 +163,7 @@ export default function App() {
             {(stats) => (
               <DashboardPage
                 stats={stats()}
-                visibleLegajos={currentLegajos()}
+                visibleLegajos={visibleLegajos()}
                 onNavigateLegajos={() => navigate("/legajos")}
                 onNavigateOperaciones={() => navigate("/operaciones")}
                 onNewLegajo={openNewLegajo}
@@ -166,7 +175,7 @@ export default function App() {
             {(stats) => (
               <LegajosPage
                 filters={filters()}
-                legajos={currentLegajos()}
+                legajos={visibleLegajos()}
                 stats={{
                   total: stats().total,
                   activos: stats().activos,
@@ -213,10 +222,19 @@ export default function App() {
         </Switch>
       </AppShell>
 
-      <LegajoFormDialog open={isDialogOpen()} current={editingLegajo()} onOpenChange={setDialogOpen} onSubmit={async (payload) => {
-        await saveLegajoMutation.mutateAsync(payload);
-      }} />
+      <LegajoFormDialog
+        open={isDialogOpen()}
+        current={editingLegajo()}
+        legajos={allLegajos()}
+        areas={currentAreas()}
+        onCreateArea={async (areaName) => createAreaMutation.mutateAsync(areaName)}
+        onOpenChange={setDialogOpen}
+        onSubmit={async (payload) => {
+          await saveLegajoMutation.mutateAsync(payload);
+        }}
+      />
 
+      <BirthdayNotice reminders={birthdayReminders()} />
       <ToastRegion toast={toast()} />
     </>
   );

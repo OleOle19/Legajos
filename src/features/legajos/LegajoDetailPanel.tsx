@@ -5,6 +5,7 @@ import ActionButton from "@/shared/ui/ActionButton";
 import EmptyState from "@/shared/ui/EmptyState";
 import StatusPill from "@/shared/ui/StatusPill";
 import AttachmentCard from "@/shared/ui/AttachmentCard";
+import { calculateAge } from "@/shared/lib/legajo";
 
 interface LegajoDetailPanelProps {
   detail?: LegajoDetail | null;
@@ -60,6 +61,7 @@ export default function LegajoDetailPanel(props: LegajoDetailPanelProps) {
                   <div class="mt-5 flex flex-wrap gap-2">
                     <RecordChip label="DNI" value={detail().dni} />
                     <RecordChip label="Tipo de contrato" value={detail().regimen_laboral} />
+                    <RecordChip label="Edad" value={formatAge(detail().fecha_nacimiento)} />
                     <RecordChip label="Alta" value={formatDate(detail().fecha_vinculacion)} />
                     <StatusPill value={detail().estado_legajo} />
                   </div>
@@ -93,10 +95,11 @@ export default function LegajoDetailPanel(props: LegajoDetailPanelProps) {
               <div class="grid gap-4 md:grid-cols-2">
                 <DetailItem label="Numero de legajo" value={detail().numero_legajo} />
                 <DetailItem label="Documento de identidad" value={detail().dni} />
-                <DetailItem label="Organo o unidad organica" value={detail().organo_unidad} />
+                <DetailItem label="Area de trabajo" value={detail().organo_unidad} />
                 <DetailItem label="Cargo/Puesto" value={detail().cargo_puesto} />
                 <DetailItem label="Tipo de contrato" value={detail().regimen_laboral} />
                 <DetailItem label="Fecha de nacimiento" value={formatDate(detail().fecha_nacimiento)} />
+                <DetailItem label="Edad actual" value={formatAge(detail().fecha_nacimiento)} />
                 <DetailItem label="Fecha de vinculacion" value={formatDate(detail().fecha_vinculacion)} />
                 <DetailItem label="Remuneracion" value={detail().remuneracion} />
                 <DetailItem label="Celular" value={detail().celular} />
@@ -285,6 +288,11 @@ function formatDate(value: string) {
 function formatDateTime(value: string) {
   const parsed = new Date(value);
   return Number.isNaN(parsed.valueOf()) ? value : parsed.toLocaleString("es-PE");
+}
+
+function formatAge(value: string) {
+  const age = calculateAge(value);
+  return age === null ? "-" : `${age} años`;
 }
 
 function humanizeMovement(type: string) {
