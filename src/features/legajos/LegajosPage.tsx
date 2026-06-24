@@ -35,6 +35,7 @@ interface LegajosPageProps {
   onSelectAttachment: (attachmentId: number) => void;
   onAttach: (detail: LegajoDetail) => void;
   onEdit: (detail: LegajoDetail) => void;
+  onDelete: (detail: LegajoDetail) => void;
   onCreate: () => void;
   onExport: (format: "pdf" | "xlsx") => void;
   onResetFilters: () => void;
@@ -210,6 +211,7 @@ export default function LegajosPage(props: LegajosPageProps) {
           onOpenAttachment={props.onOpenAttachment}
           onAttach={props.onAttach}
           onEdit={props.onEdit}
+          onDelete={props.onDelete}
           onCreate={props.onCreate}
         />
       </SectionCard>

@@ -6,6 +6,7 @@ export const legajoApi = {
   bootstrap: () => legajoBridge.bootstrap(),
   createArea: (areaName: string) => legajoBridge.createArea(areaName),
   createBackup: () => legajoBridge.createBackup(),
+  deleteLegajo: (legajoId: number) => legajoBridge.deleteLegajo(legajoId),
   exportLegajos: (format: "pdf" | "xlsx", filters: Partial<Filters>) =>
     legajoBridge.exportLegajos(format, filters),
   getLegajoDetail: (legajoId: number) => legajoBridge.getLegajoDetail(legajoId),

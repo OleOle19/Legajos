@@ -91,6 +91,19 @@ export default function App() {
     onError: (error) => showToast(getErrorMessage(error, "No se pudo adjuntar el archivo."), "danger")
   }));
 
+  const deleteLegajoMutation = createMutation(() => ({
+    mutationFn: (legajoId: number) => legajoApi.deleteLegajo(legajoId),
+    onSuccess: async () => {
+      await invalidateData();
+      setEditingLegajo(null);
+      setDialogOpen(false);
+      setSelectedAttachmentId(null);
+      navigate("/legajos");
+      showToast("Legajo eliminado correctamente.", "success");
+    },
+    onError: (error) => showToast(getErrorMessage(error, "No se pudo eliminar el legajo."), "danger")
+  }));
+
   const createAreaMutation = createMutation(() => ({
     mutationFn: (areaName: string) => legajoApi.createArea(areaName),
     onSuccess: async () => {
@@ -192,6 +205,12 @@ export default function App() {
                 }
                 onAttach={(detail) => addAttachmentMutation.mutate(detail.id)}
                 onEdit={openEditLegajo}
+                onDelete={(detail) => {
+                  if (!window.confirm(`¿Eliminar el legajo ${detail.numero_legajo} de ${detail.apellidos_nombres}?`)) {
+                    return;
+                  }
+                  deleteLegajoMutation.mutate(detail.id);
+                }}
                 onCreate={openNewLegajo}
                 onExport={(format) =>
                   runAction(
@@ -207,11 +226,12 @@ export default function App() {
           <Match when={routeSection(route()) === "operaciones"}>
             <OperationsPage
               filters={filters()}
+              areas={currentAreas()}
               onImport={() => importMutation.mutate()}
               onBackup={() => runAction(() => legajoApi.createBackup(), "Respaldo creado y abierto en el explorador.")}
-              onExport={(format) =>
+              onExport={(format, exportFilters) =>
                 runAction(
-                  () => legajoApi.exportLegajos(format, filters()),
+                  () => legajoApi.exportLegajos(format, exportFilters),
                   `Exportacion ${format.toUpperCase()} generada correctamente.`
                 )
               }

@@ -147,6 +147,12 @@ export interface MutationResponse {
   legajos: LegajoSummary[];
 }
 
+export interface DeleteResponse {
+  deleted_id: number;
+  stats: DashboardStats;
+  legajos: LegajoSummary[];
+}
+
 export interface AttachmentResponse {
   canceled: boolean;
   detail?: LegajoDetail | null;

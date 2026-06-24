@@ -4,6 +4,7 @@ import type {
   BackupResponse,
   BootstrapResponse,
   CollectionResponse,
+  DeleteResponse,
   ExportResponse,
   Filters,
   ImportResponse,
@@ -23,6 +24,7 @@ export interface LegajoBridge {
   getLegajoDetail: (legajoId: number) => Promise<LegajoDetail>;
   importLegajos: () => Promise<ImportResponse>;
   listLegajos: (filters?: Partial<Filters>) => Promise<CollectionResponse>;
+  deleteLegajo: (legajoId: number) => Promise<DeleteResponse>;
   openAttachment: (attachmentId: number) => Promise<OpenResponse>;
   saveLegajo: (payload: SaveLegajoPayload) => Promise<MutationResponse>;
   saveTemplate: () => Promise<SaveTemplateResponse>;
@@ -39,6 +41,7 @@ const createBridge = (): LegajoBridge => ({
   bootstrap: () => invoke("bootstrap"),
   createArea: (areaName) => invoke("create_area", { areaName }),
   createBackup: () => invoke("create_backup"),
+  deleteLegajo: (legajoId) => invoke("delete_legajo", { legajoId }),
   exportLegajos: (format, filters) => invoke("export_legajos", { format, filters }),
   getLegajoDetail: (legajoId) => invoke("get_legajo_detail", { legajoId }),
   importLegajos: () => invoke("import_legajos"),

@@ -14,6 +14,7 @@ interface LegajoDetailPanelProps {
   onEdit: (detail: LegajoDetail) => void;
   onAttach: (detail: LegajoDetail) => void;
   onOpenAttachment: (attachmentId: number) => void;
+  onDelete: (detail: LegajoDetail) => void;
   onCreate: () => void;
 }
 
@@ -33,7 +34,7 @@ export default function LegajoDetailPanel(props: LegajoDetailPanelProps) {
       fallback={
         <EmptyState
           title="Selecciona un legajo"
-          description="La ficha lateral mostrara identidad, propiedades, documentos y trazabilidad del registro seleccionado."
+          description="La ficha lateral mostrará identidad, propiedades, documentos y trazabilidad del registro seleccionado."
           action={
             <ActionButton variant="primary" onClick={props.onCreate}>
               Crear legajo
@@ -76,6 +77,9 @@ export default function LegajoDetailPanel(props: LegajoDetailPanelProps) {
               <ActionButton variant="primary" onClick={() => props.onAttach(detail())}>
                 Adjuntar archivo
               </ActionButton>
+              <ActionButton variant="danger" onClick={() => props.onDelete(detail())}>
+                Eliminar
+              </ActionButton>
             </div>
           </article>
 
@@ -112,7 +116,9 @@ export default function LegajoDetailPanel(props: LegajoDetailPanelProps) {
 
               <div class="mt-4 rounded-3xl border border-shell-border bg-white/88 p-4">
                 <strong class="text-[11px] uppercase tracking-[0.18em] text-ink-soft">Observaciones</strong>
-                <p class="mt-3 text-sm leading-7 text-ink-soft">{detail().observaciones || "Sin observaciones registradas."}</p>
+                <p class="mt-3 text-sm leading-7 text-ink-soft">
+                  {detail().observaciones || "Sin observaciones registradas."}
+                </p>
               </div>
             </Tabs.Content>
 
@@ -218,61 +224,28 @@ function DetailItem(props: { label: string; value: string }) {
   return (
     <div class="rounded-3xl border border-shell-border bg-white/88 p-4">
       <strong class="text-[11px] uppercase tracking-[0.18em] text-ink-soft">{props.label}</strong>
-      <p class="mt-2 text-sm leading-6 text-ink">{props.value || "-"}</p>
+      <p class="mt-2 break-words text-sm leading-6 text-ink">{props.value || "-"}</p>
     </div>
   );
 }
 
 function AttachmentPreview(props: { attachment: Adjunto | null }) {
-  const fileUrl = () => toFileUrl(props.attachment?.ruta_interna);
+  if (!props.attachment) {
+    return (
+      <div class="grid min-h-[220px] place-items-center px-6 py-10 text-center text-sm text-ink-soft">
+        Selecciona un adjunto para ver una vista previa.
+      </div>
+    );
+  }
 
   return (
-    <Switch>
-      <Match when={!props.attachment}>
-        <div class="grid min-h-[360px] place-items-center p-6 text-center text-sm text-ink-soft">
-          Sin vista previa disponible.
-        </div>
-      </Match>
-      <Match when={props.attachment?.tipo_archivo.toLowerCase() === "pdf"}>
-        <div>
-          <div class="border-b border-shell-border px-4 py-4">
-            <p class="text-[11px] uppercase tracking-[0.18em] text-ink-soft">Vista previa</p>
-            <h4 class="mt-2 font-semibold text-ink">{props.attachment?.nombre_archivo}</h4>
-          </div>
-          <iframe class="h-[440px] w-full" src={fileUrl()} title={props.attachment?.nombre_archivo} />
-        </div>
-      </Match>
-      <Match when={isImage(props.attachment?.tipo_archivo)}>
-        <div>
-          <div class="border-b border-shell-border px-4 py-4">
-            <p class="text-[11px] uppercase tracking-[0.18em] text-ink-soft">Vista previa</p>
-            <h4 class="mt-2 font-semibold text-ink">{props.attachment?.nombre_archivo}</h4>
-          </div>
-          <img class="h-[440px] w-full object-contain bg-brand/5" src={fileUrl()} alt={props.attachment?.nombre_archivo} />
-        </div>
-      </Match>
-      <Match when={true}>
-        <div class="grid min-h-[360px] place-items-center p-6 text-center">
-          <div>
-            <strong class="text-ink">{props.attachment?.nombre_archivo}</strong>
-            <p class="mt-3 text-sm text-ink-soft">
-              Este formato no tiene render interno. Usa "Abrir" para verlo con la app predeterminada.
-            </p>
-          </div>
-        </div>
-      </Match>
-    </Switch>
+    <div class="grid min-h-[220px] place-items-center px-6 py-10 text-center">
+      <div class="max-w-[320px]">
+        <strong class="block text-base text-ink">{props.attachment.nombre_archivo}</strong>
+        <p class="mt-2 text-sm text-ink-soft">Tipo: {props.attachment.tipo_archivo}</p>
+      </div>
+    </div>
   );
-}
-
-function isImage(type?: string) {
-  const normalized = String(type || "").toLowerCase();
-  return ["png", "jpg", "jpeg", "webp", "tif", "tiff"].includes(normalized);
-}
-
-function toFileUrl(filePath?: string) {
-  if (!filePath) return "";
-  return encodeURI(`file:///${String(filePath).replace(/\\/g, "/")}`);
 }
 
 function formatDate(value: string) {

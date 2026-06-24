@@ -260,6 +260,13 @@ struct MutationResponse {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
+struct DeleteResponse {
+    deleted_id: i64,
+    stats: DashboardStats,
+    legajos: Vec<LegajoSummary>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
 struct AttachmentResponse {
     canceled: bool,
     detail: Option<LegajoDetail>,
@@ -334,6 +341,7 @@ pub fn run() {
             save_legajo,
             list_areas,
             create_area,
+            delete_legajo,
             add_attachment,
             open_attachment,
             create_backup,
@@ -399,6 +407,17 @@ fn save_legajo(
     let detail = save_legajo_internal(&mut connection, payload).map_err(error_message)?;
     Ok(MutationResponse {
         detail,
+        stats: get_dashboard_stats(&connection)?,
+        legajos: list_legajos_internal(&connection, &Filters::default())?,
+    })
+}
+
+#[tauri::command]
+fn delete_legajo(legajo_id: i64, state: tauri::State<'_, AppState>) -> Result<DeleteResponse, String> {
+    let mut connection = open_connection(&state)?;
+    delete_legajo_internal(&mut connection, legajo_id).map_err(error_message)?;
+    Ok(DeleteResponse {
+        deleted_id: legajo_id,
         stats: get_dashboard_stats(&connection)?,
         legajos: list_legajos_internal(&connection, &Filters::default())?,
     })
@@ -1026,6 +1045,30 @@ fn save_legajo_internal(
 
     transaction.commit()?;
     get_legajo_detail_internal(connection, legajo_id)
+}
+
+fn delete_legajo_internal(connection: &mut Connection, legajo_id: i64) -> Result<()> {
+    let attachment_paths = {
+        let mut statement = connection.prepare("SELECT ruta_interna FROM adjuntos WHERE legajo_id = ?")?;
+        let rows = statement.query_map(params![legajo_id], |row| row.get::<_, String>(0))?;
+        rows.collect::<rusqlite::Result<Vec<_>>>()?
+    };
+
+    let transaction = connection.transaction()?;
+    let deleted = transaction.execute("DELETE FROM legajos WHERE id = ?", params![legajo_id])?;
+    if deleted == 0 {
+        return Err(anyhow!("No se encontro el legajo solicitado."));
+    }
+    transaction.commit()?;
+
+    for path in attachment_paths {
+        let file_path = PathBuf::from(path);
+        if file_path.exists() {
+            let _ = fs::remove_file(&file_path);
+        }
+    }
+
+    Ok(())
 }
 
 fn add_attachment_internal(

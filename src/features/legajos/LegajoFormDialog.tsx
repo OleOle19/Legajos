@@ -156,7 +156,7 @@ export default function LegajoFormDialog(props: LegajoFormDialogProps) {
                 <div class="min-h-0 flex-1 overflow-y-auto px-6 pb-4 pt-5 sm:px-7">
                   <div class="grid gap-5">
                     <FormSection title="Identidad y vínculo" eyebrow="Datos base">
-                      <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                      <div class="grid min-w-0 gap-4 md:grid-cols-2 xl:grid-cols-3">
                         <TextField
                           label="Número de legajo"
                           value={form.numero_legajo}
@@ -194,8 +194,8 @@ export default function LegajoFormDialog(props: LegajoFormDialogProps) {
                     </FormSection>
 
                     <div class="grid gap-5 xl:grid-cols-2">
-                    <FormSection title="Área de trabajo" eyebrow="Ubicación laboral">
-                        <div class="grid gap-4">
+                      <FormSection title="Área de trabajo" eyebrow="Ubicación laboral">
+                        <div class="grid min-w-0 gap-4">
                           <SelectField
                             label="Área"
                             value={form.organo_unidad}
@@ -204,7 +204,7 @@ export default function LegajoFormDialog(props: LegajoFormDialogProps) {
                             placeholder="Selecciona un área"
                             required
                           />
-                          <div class="grid gap-3 xl:grid-cols-[minmax(0,1fr)_auto]">
+                          <div class="grid min-w-0 gap-3 xl:grid-cols-[minmax(0,1fr)_10rem]">
                             <TextField
                               label="Nueva área"
                               value={areaDraft()}
@@ -217,6 +217,7 @@ export default function LegajoFormDialog(props: LegajoFormDialogProps) {
                                 variant="secondary"
                                 onClick={createAreaFromDraft}
                                 disabled={!areaDraft().trim()}
+                                class="w-full whitespace-nowrap xl:w-auto"
                               >
                                 Crear área
                               </ActionButton>
@@ -244,7 +245,7 @@ export default function LegajoFormDialog(props: LegajoFormDialogProps) {
                       </FormSection>
 
                       <FormSection title="Contacto y remuneración" eyebrow="Datos complementarios">
-                        <div class="grid gap-4">
+                        <div class="grid min-w-0 gap-4">
                           <TextField
                             label="Remuneración"
                             value={form.remuneracion}
@@ -272,7 +273,7 @@ export default function LegajoFormDialog(props: LegajoFormDialogProps) {
 
                     <div class="grid gap-5 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
                       <FormSection title="Perfil y control" eyebrow="Archivo y trazabilidad">
-                        <div class="grid gap-4">
+                        <div class="grid min-w-0 gap-4">
                           <TextAreaField
                             label="Perfil solicitado según el MOF"
                             value={form.perfil_mof}
@@ -290,7 +291,7 @@ export default function LegajoFormDialog(props: LegajoFormDialogProps) {
                       </FormSection>
 
                       <FormSection title="Custodia física" eyebrow="Archivo administrativo">
-                        <div class="grid gap-4">
+                        <div class="grid min-w-0 gap-4">
                           <SelectField
                             label="Estado del legajo"
                             value={form.estado_legajo}
@@ -351,7 +352,7 @@ function HeaderBadge(props: { label: string; value: string; note: string }) {
 
 function FormSection(props: { title: string; eyebrow: string; children: any }) {
   return (
-    <section class="rounded-card border border-shell-border bg-white/78 p-5 shadow-card">
+    <section class="min-w-0 overflow-hidden rounded-card border border-shell-border bg-white/78 p-5 shadow-card">
       <p class="text-[11px] uppercase tracking-[0.22em] text-ink-soft">{props.eyebrow}</p>
       <h4 class="mt-2 font-display text-xl font-semibold tracking-[-0.03em] text-ink">{props.title}</h4>
       <div class="mt-5 grid gap-4">{props.children}</div>
@@ -377,7 +378,9 @@ function TextField(props: {
         value={props.value}
         placeholder={props.placeholder}
         onInput={(event) => props.onInput(event.currentTarget.value)}
-        class="w-full min-w-0 overflow-hidden text-ellipsis whitespace-nowrap rounded-3xl border border-shell-border bg-white/92 px-4 py-3 text-ink outline-none transition duration-150 placeholder:text-ink-faint focus:border-brand/35 focus:ring-2 focus:ring-brand-accent/20 read-only:bg-[#f7f5f2] read-only:text-ink-soft"
+        title={props.value || props.placeholder || props.label}
+        class="block w-full min-w-0 overflow-hidden text-ellipsis whitespace-nowrap rounded-3xl border border-shell-border bg-white/92 px-4 py-3 text-ink outline-none transition duration-150 placeholder:text-ink-faint focus:border-brand/35 focus:ring-2 focus:ring-brand-accent/20 read-only:bg-[#f7f5f2] read-only:text-ink-soft"
+        style={{ "text-overflow": "ellipsis" }}
       />
       <ShowText when={props.helper}>{props.helper}</ShowText>
     </label>
@@ -414,7 +417,9 @@ function SelectField(props: {
         required={props.required}
         value={props.value}
         onChange={(event) => props.onInput(event.currentTarget.value)}
-        class="rounded-3xl border border-shell-border bg-white/92 px-4 py-3 text-ink outline-none transition duration-150 focus:border-brand/35 focus:ring-2 focus:ring-brand-accent/20"
+        title={props.value || props.placeholder || props.label}
+        class="block w-full min-w-0 overflow-hidden text-ellipsis whitespace-nowrap rounded-3xl border border-shell-border bg-white/92 px-4 py-3 text-ink outline-none transition duration-150 focus:border-brand/35 focus:ring-2 focus:ring-brand-accent/20"
+        style={{ "text-overflow": "ellipsis" }}
       >
         {props.placeholder && <option value="">{props.placeholder}</option>}
         <For each={props.options}>{(option) => <option value={option}>{option}</option>}</For>
