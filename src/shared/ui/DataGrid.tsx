@@ -1,4 +1,4 @@
-import { For, Show } from "solid-js";
+import { For, Show, createEffect, createMemo, createSignal } from "solid-js";
 import {
   createSolidTable,
   flexRender,
@@ -31,6 +31,33 @@ export default function DataGrid<TData>(props: DataGridProps<TData>) {
     getRowId: props.getRowId
   });
   const highlightedRowIds = new Set(props.highlightedRowIds ?? []);
+  const [pageSize, setPageSize] = createSignal(25);
+  const [pageIndex, setPageIndex] = createSignal(0);
+  const rows = createMemo(() => table.getRowModel().rows);
+  const totalRows = createMemo(() => rows().length);
+  const totalPages = createMemo(() => Math.max(1, Math.ceil(totalRows() / pageSize())));
+  const visibleRows = createMemo(() => {
+    const start = pageIndex() * pageSize();
+    return rows().slice(start, start + pageSize());
+  });
+
+  createEffect(() => {
+    const maxPageIndex = Math.max(0, totalPages() - 1);
+    if (pageIndex() > maxPageIndex) {
+      setPageIndex(maxPageIndex);
+    }
+  });
+
+  createEffect(() => {
+    if (props.selectedRowId == null) return;
+    const selectedIndex = rows().findIndex((row) => String(props.selectedRowId) === row.id);
+    if (selectedIndex >= 0) {
+      const nextPage = Math.floor(selectedIndex / pageSize());
+      if (nextPage !== pageIndex()) {
+        setPageIndex(nextPage);
+      }
+    }
+  });
 
   return (
     <div class="overflow-auto rounded-card border border-shell-border bg-white/84 shadow-card">
@@ -66,7 +93,7 @@ export default function DataGrid<TData>(props: DataGridProps<TData>) {
               </tr>
             }
           >
-            <For each={table.getRowModel().rows}>
+            <For each={visibleRows()}>
               {(row) => (
                 <DataGridRow
                   row={row}
@@ -79,6 +106,52 @@ export default function DataGrid<TData>(props: DataGridProps<TData>) {
           </Show>
         </tbody>
       </table>
+      <Show when={totalRows() > pageSize()}>
+        <div class="flex flex-wrap items-center justify-between gap-3 border-t border-shell-border/70 bg-[#fbf7f0] px-4 py-3 text-sm text-ink-soft">
+          <div>
+            Mostrando {pageIndex() * pageSize() + 1}-
+            {Math.min((pageIndex() + 1) * pageSize(), totalRows())} de {totalRows()} legajos
+          </div>
+          <div class="flex flex-wrap items-center gap-2">
+            <span class="text-xs uppercase tracking-[0.16em] text-ink-faint">Por página</span>
+            <For each={[25, 50, 100]}>
+              {(size) => (
+                <button
+                  type="button"
+                  class={cn(
+                    "rounded-full border px-3 py-1.5 text-xs font-semibold transition duration-150",
+                    pageSize() === size
+                      ? "border-brand/30 bg-brand/10 text-brand-deep"
+                      : "border-shell-border bg-white/90 text-ink-soft hover:bg-white"
+                  )}
+                  onClick={() => {
+                    setPageSize(size);
+                    setPageIndex(0);
+                  }}
+                >
+                  {size}
+                </button>
+              )}
+            </For>
+            <button
+              type="button"
+              class="rounded-full border border-shell-border bg-white/90 px-3 py-1.5 text-xs font-semibold text-ink-soft transition duration-150 hover:bg-white disabled:cursor-not-allowed disabled:opacity-45"
+              disabled={pageIndex() === 0}
+              onClick={() => setPageIndex((current) => Math.max(0, current - 1))}
+            >
+              Anterior
+            </button>
+            <button
+              type="button"
+              class="rounded-full border border-shell-border bg-white/90 px-3 py-1.5 text-xs font-semibold text-ink-soft transition duration-150 hover:bg-white disabled:cursor-not-allowed disabled:opacity-45"
+              disabled={pageIndex() >= totalPages() - 1}
+              onClick={() => setPageIndex((current) => Math.min(totalPages() - 1, current + 1))}
+            >
+              Siguiente
+            </button>
+          </div>
+        </div>
+      </Show>
     </div>
   );
 }

@@ -59,21 +59,30 @@ export default function BirthdayNotice(props: BirthdayNoticeProps) {
         <div class="pointer-events-none fixed inset-0 z-[84]">
           <ConfettiStorm pieces={confettiPieces()} />
         </div>
-
-        <button
-          type="button"
-          class="pointer-events-auto fixed bottom-6 left-6 z-[90] grid h-14 w-14 place-items-center rounded-full border border-white/75 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.32),transparent_32%),linear-gradient(135deg,#1b3b67_0%,#2d5f97_52%,#61c38f_100%)] text-lg font-semibold text-white shadow-[0_16px_36px_rgba(23,38,61,0.28)] ring-4 ring-white/35 transition duration-200 hover:scale-105 active:scale-95"
-          title="Lanzar confeti"
-          aria-label="Lanzar confeti"
-          onClick={triggerConfetti}
-        >
-          <span class="text-xl leading-none">+</span>
-        </button>
       </Show>
+
+      <button
+        type="button"
+        class="pointer-events-auto fixed bottom-6 left-6 z-[90] grid h-14 w-14 place-items-center rounded-full border border-white/75 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.32),transparent_32%),linear-gradient(135deg,#1b3b67_0%,#2d5f97_52%,#61c38f_100%)] text-lg font-semibold text-white shadow-[0_16px_36px_rgba(23,38,61,0.28)] ring-4 ring-white/35 transition duration-200 hover:scale-105 active:scale-95"
+        title="Lanzar confeti"
+        aria-label="Lanzar confeti"
+        onClick={triggerConfetti}
+      >
+        <span class="text-xl leading-none">+</span>
+      </button>
 
       <Show when={visible()}>
         <div class="pointer-events-none fixed right-6 top-6 z-[85] w-[min(92vw,360px)]">
-          <article class="relative overflow-hidden rounded-3xl border border-[#f0d8ad] bg-[linear-gradient(180deg,rgba(255,252,245,0.98)_0%,rgba(249,241,225,0.98)_100%)] shadow-shell">
+          <article class="pointer-events-auto relative overflow-hidden rounded-3xl border border-[#f0d8ad] bg-[linear-gradient(180deg,rgba(255,252,245,0.98)_0%,rgba(249,241,225,0.98)_100%)] shadow-shell">
+            <button
+              type="button"
+              class="absolute right-3 top-3 grid h-8 w-8 place-items-center rounded-full border border-[#ead6b4] bg-white/80 text-lg leading-none text-[#8d5f18] transition duration-150 hover:bg-white hover:text-[#6f4707]"
+              title="Cerrar aviso"
+              aria-label="Cerrar aviso"
+              onClick={() => setVisible(false)}
+            >
+              ×
+            </button>
             <div class="border-b border-[#ead6b4] bg-white/55 px-4 py-3">
               <p class="text-[11px] uppercase tracking-[0.2em] text-[#8d5f18]">Aviso cercano</p>
               <strong class="mt-1 block text-base text-ink">Cumpleaños próximos</strong>
