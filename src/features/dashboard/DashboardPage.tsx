@@ -163,7 +163,7 @@ export default function DashboardPage(props: DashboardPageProps) {
           />
         </SectionCard>
 
-        <SectionCard eyebrow="Composicion visible" title="Distribucion por regimen" class="bg-shell-panel-strong/95">
+        <SectionCard eyebrow="Composicion visible" title="Distribucion por tipo de contrato" class="bg-shell-panel-strong/95">
           <div class="grid gap-3">
             <For each={regimenRows()}>
               {(item) => (
@@ -184,9 +184,9 @@ export default function DashboardPage(props: DashboardPageProps) {
             {regimenRows().length === 0 && (
               <div class="grid min-h-[250px] place-items-center rounded-3xl border border-dashed border-shell-border bg-white/70 px-6 text-center">
                 <div class="max-w-[320px]">
-                  <strong class="text-base text-ink">Aun no hay regimenes visibles</strong>
+                  <strong class="text-base text-ink">Aun no hay tipos de contrato visibles</strong>
                   <p class="mt-2 text-sm leading-6 text-ink-soft">
-                    Cuando registres o importes legajos, aqui veras su reparto por regimen laboral.
+                    Cuando registres o importes legajos, aqui veras su reparto por tipo de contrato.
                   </p>
                 </div>
               </div>
@@ -380,7 +380,7 @@ function groupByRegimen(rows: LegajoSummary[]) {
   const grouped = new Map<string, number>();
 
   for (const row of rows) {
-    const key = String(row.regimen_laboral || "Sin regimen").trim() || "Sin regimen";
+    const key = String(row.regimen_laboral || "Sin contrato").trim() || "Sin contrato";
     grouped.set(key, (grouped.get(key) || 0) + 1);
   }
 

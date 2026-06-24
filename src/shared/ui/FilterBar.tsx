@@ -51,11 +51,11 @@ export default function FilterBar(props: FilterBarProps) {
           />
         </label>
         <label class="grid min-w-0 gap-2.5 text-sm">
-          <span class="pl-1 font-medium text-ink-soft">Regimen</span>
+          <span class="pl-1 font-medium text-ink-soft">Tipo de contrato</span>
           <input
             value={props.filters.regimen_laboral}
             onInput={(event) => update("regimen_laboral", event.currentTarget.value)}
-            placeholder="Filtrar por regimen"
+            placeholder="Filtrar por tipo de contrato"
             class="w-full min-w-0 rounded-[24px] border border-shell-border bg-white px-4 py-3 text-sm text-ink placeholder:text-ink-faint shadow-[0_8px_24px_rgba(23,38,61,0.05)] transition duration-150 focus:border-brand/40 focus:outline-none focus:shadow-[0_12px_28px_rgba(34,84,140,0.10)]"
           />
         </label>

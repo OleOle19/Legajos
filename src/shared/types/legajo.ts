@@ -1,5 +1,14 @@
 export type EstadoLegajo = "activo" | "pasivo";
 
+export const CONTRACT_TYPE_OPTIONS = [
+  "DL 276",
+  "DL 728 - Serenos",
+  "DL 728 - Obreros",
+  "CAS",
+  "CAS - Confianza",
+  "CAS - Necesidad"
+] as const;
+
 export interface Filters {
   search: string;
   estado: "todos" | EstadoLegajo;
@@ -15,7 +24,16 @@ export interface SaveLegajoPayload {
   organo_unidad: string;
   cargo_puesto: string;
   regimen_laboral: string;
+  fecha_nacimiento: string;
   fecha_vinculacion: string;
+  remuneracion: string;
+  celular: string;
+  direccion: string;
+  categoria_estudios: string;
+  correo_electronico: string;
+  perfil_mof: string;
+  hijos_menores_de_edad: string;
+  condicion: string;
   estado_legajo: EstadoLegajo;
   ubicacion_legajo: string;
   observaciones: string;
@@ -30,7 +48,16 @@ export interface LegajoSummary {
   organo_unidad: string;
   cargo_puesto: string;
   regimen_laboral: string;
+  fecha_nacimiento: string;
   fecha_vinculacion: string;
+  remuneracion: string;
+  celular: string;
+  direccion: string;
+  categoria_estudios: string;
+  correo_electronico: string;
+  perfil_mof: string;
+  hijos_menores_de_edad: string;
+  condicion: string;
   estado_legajo: EstadoLegajo;
   ubicacion_legajo: string;
   observaciones: string;
@@ -67,7 +94,16 @@ export interface LegajoDetail {
   organo_unidad: string;
   cargo_puesto: string;
   regimen_laboral: string;
+  fecha_nacimiento: string;
   fecha_vinculacion: string;
+  remuneracion: string;
+  celular: string;
+  direccion: string;
+  categoria_estudios: string;
+  correo_electronico: string;
+  perfil_mof: string;
+  hijos_menores_de_edad: string;
+  condicion: string;
   estado_legajo: EstadoLegajo;
   ubicacion_legajo: string;
   observaciones: string;
@@ -158,4 +194,3 @@ export const DEFAULT_FILTERS: Filters = {
   organo_unidad: "",
   regimen_laboral: ""
 };
-

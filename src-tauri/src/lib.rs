@@ -6,7 +6,7 @@ use rfd::FileDialog;
 use rusqlite::{params, params_from_iter, Connection, OptionalExtension, Row};
 use rust_xlsxwriter::Workbook;
 use serde::{Deserialize, Serialize};
-use std::collections::{BTreeMap, HashMap};
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::fs;
 use std::path::{Path, PathBuf};
 use tauri::Manager;
@@ -23,14 +23,23 @@ const REQUIRED_FIELDS: [&str; 9] = [
     "ubicacion_legajo",
 ];
 
-const TEMPLATE_COLUMNS: [(&str, &str); 10] = [
+const TEMPLATE_COLUMNS: [(&str, &str); 19] = [
     ("numero_legajo", "Numero de legajo"),
     ("apellidos_nombres", "Apellidos y nombres"),
     ("dni", "Numero de Documento de Identidad"),
     ("organo_unidad", "Organo o unidad organica"),
     ("cargo_puesto", "Nombre del cargo estructural y/o puesto"),
-    ("regimen_laboral", "Regimen laboral"),
+    ("regimen_laboral", "Tipo de contrato"),
+    ("fecha_nacimiento", "Fecha de nacimiento"),
     ("fecha_vinculacion", "Fecha de vinculacion"),
+    ("remuneracion", "Remuneracion"),
+    ("celular", "Celular"),
+    ("direccion", "Direccion"),
+    ("categoria_estudios", "Categoria de estudios"),
+    ("correo_electronico", "Correo electronico"),
+    ("perfil_mof", "Perfil solicitado segun el MOF"),
+    ("hijos_menores_de_edad", "Hijos menores de edad"),
+    ("condicion", "Condicion"),
     ("estado_legajo", "Estado del legajo"),
     ("ubicacion_legajo", "Ubicacion del legajo"),
     ("observaciones", "Observaciones"),
@@ -87,7 +96,16 @@ struct SaveLegajoPayload {
     organo_unidad: String,
     cargo_puesto: String,
     regimen_laboral: String,
+    fecha_nacimiento: String,
     fecha_vinculacion: String,
+    remuneracion: String,
+    celular: String,
+    direccion: String,
+    categoria_estudios: String,
+    correo_electronico: String,
+    perfil_mof: String,
+    hijos_menores_de_edad: String,
+    condicion: String,
     estado_legajo: String,
     ubicacion_legajo: String,
     observaciones: String,
@@ -103,7 +121,16 @@ struct LegajoRecord {
     organo_unidad: String,
     cargo_puesto: String,
     regimen_laboral: String,
+    fecha_nacimiento: String,
     fecha_vinculacion: String,
+    remuneracion: String,
+    celular: String,
+    direccion: String,
+    categoria_estudios: String,
+    correo_electronico: String,
+    perfil_mof: String,
+    hijos_menores_de_edad: String,
+    condicion: String,
     estado_legajo: String,
     ubicacion_legajo: String,
     observaciones: String,
@@ -121,7 +148,16 @@ struct LegajoSummary {
     organo_unidad: String,
     cargo_puesto: String,
     regimen_laboral: String,
+    fecha_nacimiento: String,
     fecha_vinculacion: String,
+    remuneracion: String,
+    celular: String,
+    direccion: String,
+    categoria_estudios: String,
+    correo_electronico: String,
+    perfil_mof: String,
+    hijos_menores_de_edad: String,
+    condicion: String,
     estado_legajo: String,
     ubicacion_legajo: String,
     observaciones: String,
@@ -161,7 +197,16 @@ struct LegajoDetail {
     organo_unidad: String,
     cargo_puesto: String,
     regimen_laboral: String,
+    fecha_nacimiento: String,
     fecha_vinculacion: String,
+    remuneracion: String,
+    celular: String,
+    direccion: String,
+    categoria_estudios: String,
+    correo_electronico: String,
+    perfil_mof: String,
+    hijos_menores_de_edad: String,
+    condicion: String,
     estado_legajo: String,
     ubicacion_legajo: String,
     observaciones: String,
@@ -515,7 +560,16 @@ fn initialize_schema(connection: &Connection) -> Result<()> {
       organo_unidad TEXT NOT NULL,
       cargo_puesto TEXT NOT NULL,
       regimen_laboral TEXT NOT NULL,
+      fecha_nacimiento TEXT NOT NULL DEFAULT '',
       fecha_vinculacion TEXT NOT NULL,
+      remuneracion TEXT NOT NULL DEFAULT '',
+      celular TEXT NOT NULL DEFAULT '',
+      direccion TEXT NOT NULL DEFAULT '',
+      categoria_estudios TEXT NOT NULL DEFAULT '',
+      correo_electronico TEXT NOT NULL DEFAULT '',
+      perfil_mof TEXT NOT NULL DEFAULT '',
+      hijos_menores_de_edad TEXT NOT NULL DEFAULT '',
+      condicion TEXT NOT NULL DEFAULT '',
       estado_legajo TEXT NOT NULL CHECK (estado_legajo IN ('activo', 'pasivo')),
       ubicacion_legajo TEXT NOT NULL,
       observaciones TEXT NOT NULL DEFAULT '',
@@ -542,6 +596,37 @@ fn initialize_schema(connection: &Connection) -> Result<()> {
     );
     "#,
     )?;
+    ensure_legajo_columns(connection)?;
+    Ok(())
+}
+
+fn ensure_legajo_columns(connection: &Connection) -> Result<()> {
+    let existing = connection
+        .prepare("PRAGMA table_info(legajos)")?
+        .query_map([], |row| row.get::<_, String>("name"))?
+        .collect::<Result<HashSet<_>, _>>()?;
+
+    let columns = [
+        ("fecha_nacimiento", "TEXT NOT NULL DEFAULT ''"),
+        ("remuneracion", "TEXT NOT NULL DEFAULT ''"),
+        ("celular", "TEXT NOT NULL DEFAULT ''"),
+        ("direccion", "TEXT NOT NULL DEFAULT ''"),
+        ("categoria_estudios", "TEXT NOT NULL DEFAULT ''"),
+        ("correo_electronico", "TEXT NOT NULL DEFAULT ''"),
+        ("perfil_mof", "TEXT NOT NULL DEFAULT ''"),
+        ("hijos_menores_de_edad", "TEXT NOT NULL DEFAULT ''"),
+        ("condicion", "TEXT NOT NULL DEFAULT ''"),
+    ];
+
+    for (column, definition) in columns {
+        if !existing.contains(column) {
+            connection.execute(
+                &format!("ALTER TABLE legajos ADD COLUMN {} {}", column, definition),
+                [],
+            )?;
+        }
+    }
+
     Ok(())
 }
 
@@ -555,9 +640,9 @@ fn list_legajos_internal(
     if !filters.search.trim().is_empty() {
         let needle = format!("%{}%", filters.search.trim());
         clauses.push(
-      "(numero_legajo LIKE ? OR apellidos_nombres LIKE ? OR dni LIKE ? OR organo_unidad LIKE ? OR cargo_puesto LIKE ? OR ubicacion_legajo LIKE ?)".to_string(),
-    );
-        for _ in 0..6 {
+            "(numero_legajo LIKE ? OR apellidos_nombres LIKE ? OR dni LIKE ? OR organo_unidad LIKE ? OR cargo_puesto LIKE ? OR regimen_laboral LIKE ? OR fecha_nacimiento LIKE ? OR fecha_vinculacion LIKE ? OR remuneracion LIKE ? OR celular LIKE ? OR direccion LIKE ? OR categoria_estudios LIKE ? OR correo_electronico LIKE ? OR perfil_mof LIKE ? OR hijos_menores_de_edad LIKE ? OR condicion LIKE ? OR ubicacion_legajo LIKE ?)".to_string(),
+        );
+        for _ in 0..17 {
             values.push(needle.clone());
         }
     }
@@ -616,7 +701,16 @@ fn legajo_summary_from_row(row: &Row<'_>) -> rusqlite::Result<LegajoSummary> {
         organo_unidad: row.get("organo_unidad")?,
         cargo_puesto: row.get("cargo_puesto")?,
         regimen_laboral: row.get("regimen_laboral")?,
+        fecha_nacimiento: row.get("fecha_nacimiento")?,
         fecha_vinculacion: row.get("fecha_vinculacion")?,
+        remuneracion: row.get("remuneracion")?,
+        celular: row.get("celular")?,
+        direccion: row.get("direccion")?,
+        categoria_estudios: row.get("categoria_estudios")?,
+        correo_electronico: row.get("correo_electronico")?,
+        perfil_mof: row.get("perfil_mof")?,
+        hijos_menores_de_edad: row.get("hijos_menores_de_edad")?,
+        condicion: row.get("condicion")?,
         estado_legajo: row.get("estado_legajo")?,
         ubicacion_legajo: row.get("ubicacion_legajo")?,
         observaciones: row.get("observaciones")?,
@@ -636,7 +730,16 @@ fn legajo_record_from_row(row: &Row<'_>) -> rusqlite::Result<LegajoRecord> {
         organo_unidad: row.get("organo_unidad")?,
         cargo_puesto: row.get("cargo_puesto")?,
         regimen_laboral: row.get("regimen_laboral")?,
+        fecha_nacimiento: row.get("fecha_nacimiento")?,
         fecha_vinculacion: row.get("fecha_vinculacion")?,
+        remuneracion: row.get("remuneracion")?,
+        celular: row.get("celular")?,
+        direccion: row.get("direccion")?,
+        categoria_estudios: row.get("categoria_estudios")?,
+        correo_electronico: row.get("correo_electronico")?,
+        perfil_mof: row.get("perfil_mof")?,
+        hijos_menores_de_edad: row.get("hijos_menores_de_edad")?,
+        condicion: row.get("condicion")?,
         estado_legajo: row.get("estado_legajo")?,
         ubicacion_legajo: row.get("ubicacion_legajo")?,
         observaciones: row.get("observaciones")?,
@@ -692,7 +795,16 @@ fn get_legajo_detail_internal(connection: &Connection, legajo_id: i64) -> Result
         organo_unidad: record.organo_unidad,
         cargo_puesto: record.cargo_puesto,
         regimen_laboral: record.regimen_laboral,
+        fecha_nacimiento: record.fecha_nacimiento,
         fecha_vinculacion: record.fecha_vinculacion,
+        remuneracion: record.remuneracion,
+        celular: record.celular,
+        direccion: record.direccion,
+        categoria_estudios: record.categoria_estudios,
+        correo_electronico: record.correo_electronico,
+        perfil_mof: record.perfil_mof,
+        hijos_menores_de_edad: record.hijos_menores_de_edad,
+        condicion: record.condicion,
         estado_legajo: record.estado_legajo,
         ubicacion_legajo: record.ubicacion_legajo,
         observaciones: record.observaciones,
@@ -741,7 +853,16 @@ fn save_legajo_internal(
           organo_unidad = ?,
           cargo_puesto = ?,
           regimen_laboral = ?,
+          fecha_nacimiento = ?,
           fecha_vinculacion = ?,
+          remuneracion = ?,
+          celular = ?,
+          direccion = ?,
+          categoria_estudios = ?,
+          correo_electronico = ?,
+          perfil_mof = ?,
+          hijos_menores_de_edad = ?,
+          condicion = ?,
           estado_legajo = ?,
           ubicacion_legajo = ?,
           observaciones = ?,
@@ -756,7 +877,16 @@ fn save_legajo_internal(
                 &sanitized.organo_unidad,
                 &sanitized.cargo_puesto,
                 &sanitized.regimen_laboral,
+                &sanitized.fecha_nacimiento,
                 &sanitized.fecha_vinculacion,
+                &sanitized.remuneracion,
+                &sanitized.celular,
+                &sanitized.direccion,
+                &sanitized.categoria_estudios,
+                &sanitized.correo_electronico,
+                &sanitized.perfil_mof,
+                &sanitized.hijos_menores_de_edad,
+                &sanitized.condicion,
                 &sanitized.estado_legajo,
                 &sanitized.ubicacion_legajo,
                 &sanitized.observaciones,
@@ -781,9 +911,11 @@ fn save_legajo_internal(
             r#"
         INSERT INTO legajos (
           numero_legajo, apellidos_nombres, dni, organo_unidad, cargo_puesto,
-          regimen_laboral, fecha_vinculacion, estado_legajo, ubicacion_legajo,
+          regimen_laboral, fecha_nacimiento, fecha_vinculacion, remuneracion, celular,
+          direccion, categoria_estudios, correo_electronico, perfil_mof,
+          hijos_menores_de_edad, condicion, estado_legajo, ubicacion_legajo,
           observaciones, origen_registro, created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       "#,
             params![
                 &sanitized.numero_legajo,
@@ -792,7 +924,16 @@ fn save_legajo_internal(
                 &sanitized.organo_unidad,
                 &sanitized.cargo_puesto,
                 &sanitized.regimen_laboral,
+                &sanitized.fecha_nacimiento,
                 &sanitized.fecha_vinculacion,
+                &sanitized.remuneracion,
+                &sanitized.celular,
+                &sanitized.direccion,
+                &sanitized.categoria_estudios,
+                &sanitized.correo_electronico,
+                &sanitized.perfil_mof,
+                &sanitized.hijos_menores_de_edad,
+                &sanitized.condicion,
                 &sanitized.estado_legajo,
                 &sanitized.ubicacion_legajo,
                 &sanitized.observaciones,
@@ -959,6 +1100,7 @@ fn import_legajos_workbook(file_path: &Path) -> Result<Vec<ImportedLegajoRow>> {
         };
 
         let sheet_key = sheet_import_key(&sheet_name);
+        let header_row = rows.get(header_row_index).cloned().unwrap_or_default();
         for (index, row) in rows.iter().enumerate().skip(header_row_index + 1) {
             if is_blank_row(row) {
                 continue;
@@ -972,6 +1114,7 @@ fn import_legajos_workbook(file_path: &Path) -> Result<Vec<ImportedLegajoRow>> {
                 excel_row,
                 import_sequence,
                 &headers,
+                &header_row,
                 row,
             );
             result.push(ImportedLegajoRow {
@@ -995,18 +1138,26 @@ fn build_import_payload(
     excel_row: usize,
     import_sequence: usize,
     headers: &HashMap<String, usize>,
+    header_row: &[String],
     row: &[String],
 ) -> SaveLegajoPayload {
-    let numero_origen = first_non_empty(row, headers, &["numerodelegajo", "n"])
+    let mut used_columns = HashSet::new();
+    let numero_origen = take_import_value(row, headers, &mut used_columns, &["numerodelegajo", "n"])
         .and_then(|value| value.parse::<usize>().ok())
         .unwrap_or_else(|| import_sequence.max(1));
-    let area = first_non_empty(row, headers, &["area"]);
-    let organo_unidad = first_non_empty(row, headers, &["organoounidadorganica", "organoounidad"])
-        .or_else(|| area.clone())
-        .unwrap_or_else(|| sheet_name.trim().to_string());
-    let cargo_puesto = first_non_empty(
+    let area = take_import_value(row, headers, &mut used_columns, &["area"]);
+    let organo_unidad = take_import_value(
         row,
         headers,
+        &mut used_columns,
+        &["organoounidadorganica", "organoounidad"],
+    )
+    .or_else(|| area.clone())
+    .unwrap_or_else(|| sheet_name.trim().to_string());
+    let cargo_puesto = take_import_value(
+        row,
+        headers,
+        &mut used_columns,
         &[
             "nombredelcargo",
             "nombredelcargoestructuralyopuesto",
@@ -1015,32 +1166,59 @@ fn build_import_payload(
         ],
     )
     .or_else(|| area.clone())
-    .or_else(|| first_non_empty(row, headers, &["perfilesolicitadossegunelmof"]))
+    .or_else(|| take_import_value(row, headers, &mut used_columns, &["perfilesolicitadossegunelmof"]))
     .unwrap_or_else(|| organo_unidad.clone());
-  let regimen_laboral = sheet_regimen_label(sheet_name);
-    let fecha_vinculacion =
-        first_non_empty(row, headers, &["fechadeingreso", "fechadevinculacion"]);
-    let estado_legajo = first_non_empty(row, headers, &["estadodellegajo", "condicion"])
+    let regimen_laboral = sheet_regimen_label(sheet_name);
+    let fecha_nacimiento = take_import_value(row, headers, &mut used_columns, &["fechadenacimiento"])
+        .map(|value| normalize_date_input(&value))
+        .unwrap_or_default();
+    let fecha_vinculacion = take_import_value(
+        row,
+        headers,
+        &mut used_columns,
+        &["fechadeingreso", "fechadevinculacion"],
+    )
+    .map(|value| normalize_date_input(&value))
+    .unwrap_or_default();
+    let remuneracion = take_import_value(row, headers, &mut used_columns, &["remuneracion"]).unwrap_or_default();
+    let celular = take_import_value(row, headers, &mut used_columns, &["celular"]).unwrap_or_default();
+    let direccion = take_import_value(row, headers, &mut used_columns, &["direccion"]).unwrap_or_default();
+    let categoria_estudios =
+        take_import_value(row, headers, &mut used_columns, &["categoriadeestudios"]).unwrap_or_default();
+    let correo_electronico =
+        take_import_value(row, headers, &mut used_columns, &["correoelectronico"]).unwrap_or_default();
+    let perfil_mof = take_import_value(row, headers, &mut used_columns, &["perfilesolicitadossegunelmof"])
+        .unwrap_or_default();
+    let hijos_menores_de_edad =
+        take_import_value(row, headers, &mut used_columns, &["hijosmenoresdeedad"]).unwrap_or_default();
+    let condicion = take_import_value(row, headers, &mut used_columns, &["condicion"]).unwrap_or_default();
+    let estado_legajo = take_import_value(row, headers, &mut used_columns, &["estadodellegajo"])
         .map(|value| normalize_estado(&value))
         .unwrap_or_else(|| "activo".to_string());
     let ubicacion_legajo =
-        first_non_empty(row, headers, &["ubicaciondellegajo"]).unwrap_or_default();
+        take_import_value(row, headers, &mut used_columns, &["ubicaciondellegajo"]).unwrap_or_default();
 
     let mut payload = SaveLegajoPayload {
         numero_legajo: format!("{}-{:04}", sheet_key, numero_origen),
-        apellidos_nombres: first_non_empty(row, headers, &["apellidosynombres"])
+        apellidos_nombres: take_import_value(row, headers, &mut used_columns, &["apellidosynombres"])
             .unwrap_or_default(),
-        dni: first_non_empty(row, headers, &["dni"]).unwrap_or_default(),
+        dni: take_import_value(row, headers, &mut used_columns, &["dni"]).unwrap_or_default(),
         organo_unidad,
         cargo_puesto,
         regimen_laboral,
-        fecha_vinculacion: fecha_vinculacion
-            .as_deref()
-            .map(normalize_date_input)
-            .unwrap_or_default(),
+        fecha_nacimiento,
+        fecha_vinculacion,
+        remuneracion,
+        celular,
+        direccion,
+        categoria_estudios,
+        correo_electronico,
+        perfil_mof,
+        hijos_menores_de_edad,
+        condicion,
         estado_legajo,
         ubicacion_legajo,
-        observaciones: build_import_observaciones(sheet_name, excel_row, headers, row),
+        observaciones: build_import_observaciones(sheet_name, excel_row, header_row, row, &used_columns),
         origen_registro: Some("importado".to_string()),
         ..SaveLegajoPayload::default()
     };
@@ -1055,104 +1233,55 @@ fn build_import_payload(
 fn build_import_observaciones(
     sheet_name: &str,
     excel_row: usize,
-    headers: &HashMap<String, usize>,
+    header_row: &[String],
     row: &[String],
+    used_columns: &HashSet<usize>,
 ) -> String {
     let mut notes = vec![
         format!("Fuente Excel: {}", sheet_name),
         format!("Fila original: {}", excel_row),
     ];
 
-    push_import_note(
-        &mut notes,
-        "Fecha de nacimiento",
-        first_non_empty(row, headers, &["fechadenacimiento"]),
-        true,
-    );
-    push_import_note(
-        &mut notes,
-        "Fecha de ingreso",
-        first_non_empty(row, headers, &["fechadeingreso"]),
-        true,
-    );
-    push_import_note(
-        &mut notes,
-        "Celular",
-        first_non_empty(row, headers, &["celular"]),
-        false,
-    );
-    push_import_note(
-        &mut notes,
-        "Direccion",
-        first_non_empty(row, headers, &["direccion"]),
-        false,
-    );
-    push_import_note(
-        &mut notes,
-        "Categoria de estudios",
-        first_non_empty(row, headers, &["categoriadeestudios"]),
-        false,
-    );
-    push_import_note(
-        &mut notes,
-        "Correo electronico",
-        first_non_empty(row, headers, &["correoelectronico"]),
-        false,
-    );
-    push_import_note(
-        &mut notes,
-        "Perfil MOF",
-        first_non_empty(row, headers, &["perfilesolicitadossegunelmof"]),
-        false,
-    );
-    push_import_note(
-        &mut notes,
-        "Remuneracion",
-        first_non_empty(row, headers, &["remuneracion"]),
-        false,
-    );
-    push_import_note(
-        &mut notes,
-        "Hijos menores",
-        first_non_empty(row, headers, &["hijosmenoresdeedad"]),
-        false,
-    );
-    push_import_note(
-        &mut notes,
-        "Condicion",
-        first_non_empty(row, headers, &["condicion"]),
-        false,
-    );
+    for (index, label) in header_row.iter().enumerate() {
+        if used_columns.contains(&index) {
+            continue;
+        }
+
+        let value = row.get(index).map(|cell| cell.trim()).unwrap_or("");
+        if value.is_empty() || label.trim().is_empty() {
+            continue;
+        }
+
+        notes.push(format!("{}: {}", label.trim(), value));
+    }
 
     notes.join(" | ")
 }
 
-fn push_import_note(notes: &mut Vec<String>, label: &str, value: Option<String>, date_like: bool) {
-    if let Some(value) = value
-        .map(|text| text.trim().to_string())
-        .filter(|text| !text.is_empty())
-    {
-        let rendered = if date_like {
-            normalize_date_input(&value)
-        } else {
-            value
-        };
-        notes.push(format!("{}: {}", label, rendered));
-    }
+fn take_import_value(
+    row: &[String],
+    headers: &HashMap<String, usize>,
+    used_columns: &mut HashSet<usize>,
+    keys: &[&str],
+) -> Option<String> {
+    first_non_empty_with_index(row, headers, keys).map(|(index, value)| {
+        used_columns.insert(index);
+        value
+    })
 }
 
-fn first_non_empty(
+fn first_non_empty_with_index(
     row: &[String],
     headers: &HashMap<String, usize>,
     keys: &[&str],
-) -> Option<String> {
+) -> Option<(usize, String)> {
     for key in keys {
         let normalized = normalize_header(key);
         if let Some(index) = headers.get(&normalized) {
             if let Some(value) = row.get(*index) {
                 let text = value.trim();
                 if !text.is_empty() {
-                    return Some(text.to_string());
+                    return Some((*index, text.to_string()));
                 }
             }
         }
@@ -1224,6 +1353,8 @@ fn sheet_regimen_label(sheet_name: &str) -> String {
     "728serenos" | "dl728serenos" => "DL 728 - Serenos".to_string(),
     "728obreros" | "dl728obreros" => "DL 728 - Obreros".to_string(),
     "cas" => "CAS".to_string(),
+    "casconfianza" | "dlcasconfianza" => "CAS - Confianza".to_string(),
+    "casnecesidad" | "dlcasnecesidad" => "CAS - Necesidad".to_string(),
     _ => sheet_name.trim().to_string(),
   }
 }
@@ -1243,7 +1374,16 @@ fn write_template(file_path: &Path) -> Result<()> {
         "Oficina de Recursos Humanos",
         "Especialista administrativo",
         "CAS",
+        "1990-05-18",
         "2023-01-15",
+        "2500",
+        "987654321",
+        "Jr. Ejemplo 123",
+        "Universitaria completa",
+        "ana.perez@municipio.gob.pe",
+        "Perfil de ejemplo segun MOF",
+        "2",
+        "Contratado",
         "activo",
         "Archivo central - Anaquel 2",
         "Fila de ejemplo",
@@ -1271,16 +1411,7 @@ fn export_legajos_workbook(file_path: &Path, rows: &[LegajoSummary]) -> Result<(
 
     for (row_index, row) in rows.iter().enumerate() {
         let target = (row_index + 1) as u32;
-        worksheet.write_string(target, 0, &row.numero_legajo)?;
-        worksheet.write_string(target, 1, &row.apellidos_nombres)?;
-        worksheet.write_string(target, 2, &row.dni)?;
-        worksheet.write_string(target, 3, &row.organo_unidad)?;
-        worksheet.write_string(target, 4, &row.cargo_puesto)?;
-        worksheet.write_string(target, 5, &row.regimen_laboral)?;
-        worksheet.write_string(target, 6, &row.fecha_vinculacion)?;
-        worksheet.write_string(target, 7, &row.estado_legajo)?;
-        worksheet.write_string(target, 8, &row.ubicacion_legajo)?;
-        worksheet.write_string(target, 9, &row.observaciones)?;
+        write_export_row(worksheet, target, row)?;
     }
 
     for column in 0..TEMPLATE_COLUMNS.len() {
@@ -1288,6 +1419,36 @@ fn export_legajos_workbook(file_path: &Path, rows: &[LegajoSummary]) -> Result<(
     }
 
     workbook.save(file_path)?;
+    Ok(())
+}
+
+fn write_export_row(worksheet: &mut rust_xlsxwriter::Worksheet, target: u32, row: &LegajoSummary) -> Result<()> {
+    let values = [
+        row.numero_legajo.as_str(),
+        row.apellidos_nombres.as_str(),
+        row.dni.as_str(),
+        row.organo_unidad.as_str(),
+        row.cargo_puesto.as_str(),
+        row.regimen_laboral.as_str(),
+        row.fecha_nacimiento.as_str(),
+        row.fecha_vinculacion.as_str(),
+        row.remuneracion.as_str(),
+        row.celular.as_str(),
+        row.direccion.as_str(),
+        row.categoria_estudios.as_str(),
+        row.correo_electronico.as_str(),
+        row.perfil_mof.as_str(),
+        row.hijos_menores_de_edad.as_str(),
+        row.condicion.as_str(),
+        row.estado_legajo.as_str(),
+        row.ubicacion_legajo.as_str(),
+        row.observaciones.as_str(),
+    ];
+
+    for (column, value) in values.iter().enumerate() {
+        worksheet.write_string(target, column as u16, *value)?;
+    }
+
     Ok(())
 }
 
@@ -1313,24 +1474,39 @@ fn build_report_html(rows: &[LegajoSummary], filters: &Filters) -> String {
         .collect::<Vec<_>>()
         .join("");
     let table_rows = rows
-    .iter()
-    .map(|row| {
-      format!(
-        "<tr><td>{}</td><td>{}</td><td>{}</td><td>{}</td><td>{}</td><td>{}</td><td>{}</td><td>{}</td><td>{}</td><td>{}</td></tr>",
-        escape_html(&row.numero_legajo),
-        escape_html(&row.apellidos_nombres),
-        escape_html(&row.dni),
-        escape_html(&row.organo_unidad),
-        escape_html(&row.cargo_puesto),
-        escape_html(&row.regimen_laboral),
-        escape_html(&row.fecha_vinculacion),
-        escape_html(&row.estado_legajo),
-        escape_html(&row.ubicacion_legajo),
-        escape_html(&row.observaciones),
-      )
-    })
-    .collect::<Vec<_>>()
-    .join("");
+        .iter()
+        .map(|row| {
+            format!(
+                "<tr>{}</tr>",
+                [
+                    escape_html(&row.numero_legajo),
+                    escape_html(&row.apellidos_nombres),
+                    escape_html(&row.dni),
+                    escape_html(&row.organo_unidad),
+                    escape_html(&row.cargo_puesto),
+                    escape_html(&row.regimen_laboral),
+                    escape_html(&row.fecha_nacimiento),
+                    escape_html(&row.fecha_vinculacion),
+                    escape_html(&row.remuneracion),
+                    escape_html(&row.celular),
+                    escape_html(&row.direccion),
+                    escape_html(&row.categoria_estudios),
+                    escape_html(&row.correo_electronico),
+                    escape_html(&row.perfil_mof),
+                    escape_html(&row.hijos_menores_de_edad),
+                    escape_html(&row.condicion),
+                    escape_html(&row.estado_legajo),
+                    escape_html(&row.ubicacion_legajo),
+                    escape_html(&row.observaciones),
+                ]
+                .into_iter()
+                .map(|value| format!("<td>{}</td>", value))
+                .collect::<Vec<_>>()
+                .join("")
+            )
+        })
+        .collect::<Vec<_>>()
+        .join("");
 
     format!(
         r#"<!DOCTYPE html>
@@ -1343,8 +1519,8 @@ fn build_report_html(rows: &[LegajoSummary], filters: &Filters) -> String {
       .subhead {{ margin-bottom: 18px; color: #4f5d75; }}
       .meta {{ display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-bottom: 20px; }}
       .meta-card {{ border: 1px solid #d4dde8; border-radius: 12px; padding: 12px 14px; background: #f8fbff; }}
-      table {{ width: 100%; border-collapse: collapse; font-size: 9px; }}
-      th, td {{ border: 1px solid #d9e2ec; padding: 6px; text-align: left; vertical-align: top; }}
+      table {{ width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 8px; }}
+      th, td {{ border: 1px solid #d9e2ec; padding: 5px; text-align: left; vertical-align: top; word-break: break-word; }}
       th {{ background: #173a63; color: #ffffff; font-weight: 600; }}
       tr:nth-child(even) td {{ background: #f7fafc; }}
     </style>
@@ -1383,7 +1559,7 @@ fn build_filters_label(filters: &Filters) -> String {
         parts.push(format!("Unidad: {}", filters.organo_unidad.trim()));
     }
     if !filters.regimen_laboral.trim().is_empty() {
-        parts.push(format!("Regimen: {}", filters.regimen_laboral.trim()));
+        parts.push(format!("Tipo de contrato: {}", filters.regimen_laboral.trim()));
     }
     if parts.is_empty() {
         "Todos los registros".to_string()
@@ -1483,8 +1659,17 @@ fn sanitize_legajo_payload(mut payload: SaveLegajoPayload) -> Result<SaveLegajoP
     payload.dni = payload.dni.trim().to_string();
     payload.organo_unidad = payload.organo_unidad.trim().to_string();
     payload.cargo_puesto = payload.cargo_puesto.trim().to_string();
-    payload.regimen_laboral = payload.regimen_laboral.trim().to_string();
+    payload.regimen_laboral = normalize_contract_type(&payload.regimen_laboral);
+    payload.fecha_nacimiento = normalize_date_input(&payload.fecha_nacimiento);
     payload.fecha_vinculacion = normalize_date_input(&payload.fecha_vinculacion);
+    payload.remuneracion = payload.remuneracion.trim().to_string();
+    payload.celular = payload.celular.trim().to_string();
+    payload.direccion = payload.direccion.trim().to_string();
+    payload.categoria_estudios = payload.categoria_estudios.trim().to_string();
+    payload.correo_electronico = payload.correo_electronico.trim().to_string();
+    payload.perfil_mof = payload.perfil_mof.trim().to_string();
+    payload.hijos_menores_de_edad = payload.hijos_menores_de_edad.trim().to_string();
+    payload.condicion = payload.condicion.trim().to_string();
     payload.estado_legajo = normalize_estado(&payload.estado_legajo);
     payload.ubicacion_legajo = payload.ubicacion_legajo.trim().to_string();
     payload.observaciones = payload.observaciones.trim().to_string();
@@ -1586,6 +1771,24 @@ fn normalize_estado(value: &str) -> String {
     }
 }
 
+fn normalize_contract_type(value: &str) -> String {
+    let text = value.trim();
+    if text.is_empty() {
+        return String::new();
+    }
+
+    let normalized = normalize_header(text);
+    match normalized.as_str() {
+        "276" | "dl276" => "DL 276".to_string(),
+        "728serenos" | "dl728serenos" | "serenos" => "DL 728 - Serenos".to_string(),
+        "728obreros" | "dl728obreros" | "obreros" => "DL 728 - Obreros".to_string(),
+        "cas" => "CAS".to_string(),
+        "casconfianza" | "dlcasconfianza" | "confianza" => "CAS - Confianza".to_string(),
+        "casnecesidad" | "dlcasnecesidad" | "necesidad" => "CAS - Necesidad".to_string(),
+        _ => text.to_string(),
+    }
+}
+
 fn normalize_header(value: &str) -> String {
     value
         .trim()
@@ -1638,15 +1841,44 @@ fn build_change_detail(previous: &LegajoRecord, next: &SaveLegajoPayload) -> Str
             next.cargo_puesto.as_str(),
         ),
         (
-            "Regimen laboral",
+            "Tipo de contrato",
             previous.regimen_laboral.as_str(),
             next.regimen_laboral.as_str(),
+        ),
+        (
+            "Fecha de nacimiento",
+            previous.fecha_nacimiento.as_str(),
+            next.fecha_nacimiento.as_str(),
         ),
         (
             "Fecha de vinculacion",
             previous.fecha_vinculacion.as_str(),
             next.fecha_vinculacion.as_str(),
         ),
+        (
+            "Remuneracion",
+            previous.remuneracion.as_str(),
+            next.remuneracion.as_str(),
+        ),
+        ("Celular", previous.celular.as_str(), next.celular.as_str()),
+        ("Direccion", previous.direccion.as_str(), next.direccion.as_str()),
+        (
+            "Categoria de estudios",
+            previous.categoria_estudios.as_str(),
+            next.categoria_estudios.as_str(),
+        ),
+        (
+            "Correo electronico",
+            previous.correo_electronico.as_str(),
+            next.correo_electronico.as_str(),
+        ),
+        ("Perfil MOF", previous.perfil_mof.as_str(), next.perfil_mof.as_str()),
+        (
+            "Hijos menores de edad",
+            previous.hijos_menores_de_edad.as_str(),
+            next.hijos_menores_de_edad.as_str(),
+        ),
+        ("Condicion", previous.condicion.as_str(), next.condicion.as_str()),
         (
             "Estado del legajo",
             previous.estado_legajo.as_str(),

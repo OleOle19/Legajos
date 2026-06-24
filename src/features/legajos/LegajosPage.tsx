@@ -98,7 +98,7 @@ export default function LegajosPage(props: LegajosPageProps) {
     },
     {
       accessorKey: "regimen_laboral",
-      header: sortButton("Regimen", "regimen_laboral", sort(), setSort),
+      header: sortButton("Tipo de contrato", "regimen_laboral", sort(), setSort),
       cell: (context) => (
         <span class="inline-flex rounded-2xl border border-shell-border bg-white/82 px-3 py-2 text-xs text-ink-soft">
           {context.row.original.regimen_laboral}
@@ -268,7 +268,7 @@ function activeFilterChips(filters: Filters, sort: { key: SortKey; direction: "a
   if (filters.search) chips.push({ label: "Busqueda", value: filters.search });
   if (filters.estado !== "todos") chips.push({ label: "Estado", value: filters.estado });
   if (filters.organo_unidad) chips.push({ label: "Unidad", value: filters.organo_unidad });
-  if (filters.regimen_laboral) chips.push({ label: "Regimen", value: filters.regimen_laboral });
+  if (filters.regimen_laboral) chips.push({ label: "Tipo de contrato", value: filters.regimen_laboral });
   chips.push({
     label: "Orden",
     value: `${humanizeSortKey(sort.key)} ${sort.direction === "asc" ? "ascendente" : "descendente"}`
@@ -283,7 +283,7 @@ function humanizeSortKey(value: SortKey) {
     dni: "DNI",
     organo_unidad: "Unidad",
     cargo_puesto: "Cargo",
-    regimen_laboral: "Regimen",
+    regimen_laboral: "Tipo de contrato",
     estado_legajo: "Estado",
     ubicacion_legajo: "Ubicacion",
     total_adjuntos: "Adjuntos",

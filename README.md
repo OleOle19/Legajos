@@ -5,7 +5,7 @@ Aplicacion de escritorio local para administrar legajos activos y pasivos en una
 ## Alcance actual
 
 - Registro y edicion de legajos.
-- Busqueda y filtros por estado, unidad y regimen.
+- Busqueda y filtros por estado, unidad y tipo de contrato.
 - Historial de movimientos.
 - Adjuntos PDF e imagen copiados al almacenamiento interno de la app.
 - Importacion desde plantilla Excel o libro multipestana de RR.HH.
@@ -35,8 +35,8 @@ npm.cmd run check
 
 ## Flujo de uso
 
-1. Crear legajos manualmente o descargar la plantilla Excel.
-2. Importar la plantilla completada o el libro de RR.HH. con varias hojas.
+1. Crear legajos manualmente o descargar la plantilla Excel nueva.
+2. Importar la plantilla completada o el libro de RR.HH. con varias hojas y columnas comunes entre hojas.
 3. Consultar el padron y abrir la ficha detallada.
 4. Adjuntar PDFs o imagenes escaneadas.
 5. Exportar la relacion digital a Excel o PDF.
@@ -44,7 +44,7 @@ npm.cmd run check
 
 ## Almacenamiento local
 
-La app crea una carpeta de trabajo dentro de `userData` de Electron con:
+La app crea una carpeta de trabajo local con:
 
 - `legajos.sqlite`
 - carpeta `adjuntos`

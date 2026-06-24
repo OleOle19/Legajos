@@ -59,7 +59,7 @@ export default function LegajoDetailPanel(props: LegajoDetailPanelProps) {
                   </p>
                   <div class="mt-5 flex flex-wrap gap-2">
                     <RecordChip label="DNI" value={detail().dni} />
-                    <RecordChip label="Regimen" value={detail().regimen_laboral} />
+                    <RecordChip label="Tipo de contrato" value={detail().regimen_laboral} />
                     <RecordChip label="Alta" value={formatDate(detail().fecha_vinculacion)} />
                     <StatusPill value={detail().estado_legajo} />
                   </div>
@@ -95,8 +95,17 @@ export default function LegajoDetailPanel(props: LegajoDetailPanelProps) {
                 <DetailItem label="Documento de identidad" value={detail().dni} />
                 <DetailItem label="Organo o unidad organica" value={detail().organo_unidad} />
                 <DetailItem label="Cargo/Puesto" value={detail().cargo_puesto} />
-                <DetailItem label="Regimen laboral" value={detail().regimen_laboral} />
+                <DetailItem label="Tipo de contrato" value={detail().regimen_laboral} />
+                <DetailItem label="Fecha de nacimiento" value={formatDate(detail().fecha_nacimiento)} />
                 <DetailItem label="Fecha de vinculacion" value={formatDate(detail().fecha_vinculacion)} />
+                <DetailItem label="Remuneracion" value={detail().remuneracion} />
+                <DetailItem label="Celular" value={detail().celular} />
+                <DetailItem label="Direccion" value={detail().direccion} />
+                <DetailItem label="Categoria de estudios" value={detail().categoria_estudios} />
+                <DetailItem label="Correo electronico" value={detail().correo_electronico} />
+                <DetailItem label="Perfil MOF" value={detail().perfil_mof} />
+                <DetailItem label="Hijos menores de edad" value={detail().hijos_menores_de_edad} />
+                <DetailItem label="Condicion" value={detail().condicion} />
                 <DetailItem label="Estado" value={detail().estado_legajo} />
                 <DetailItem label="Ubicacion del legajo" value={detail().ubicacion_legajo} />
                 <DetailItem label="Origen del registro" value={detail().origen_registro} />
