@@ -1,14 +1,20 @@
 use anyhow::{anyhow, Context, Result};
 use calamine::{open_workbook_auto, Reader};
 use chrono::{Duration, NaiveDate, SecondsFormat, Utc};
+use argon2::{
+    password_hash::{PasswordHash, PasswordHasher, PasswordVerifier, SaltString},
+    Argon2,
+};
 use printpdf::{GeneratePdfOptions, PdfDocument, PdfSaveOptions};
 use rfd::FileDialog;
 use rusqlite::{params, params_from_iter, Connection, OptionalExtension, Row};
+use rand_core::{OsRng, RngCore};
 use rust_xlsxwriter::Workbook;
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::sync::Mutex;
 use tauri::Manager;
 
 const REQUIRED_FIELDS: [&str; 9] = [
@@ -45,12 +51,12 @@ const TEMPLATE_COLUMNS: [(&str, &str); 19] = [
     ("observaciones", "Observaciones"),
 ];
 
-#[derive(Clone)]
 struct AppState {
     root_dir: PathBuf,
     database_path: PathBuf,
     attachments_dir: PathBuf,
     backups_dir: PathBuf,
+    auth_session: Mutex<AuthSession>,
 }
 
 impl AppState {
@@ -65,6 +71,7 @@ impl AppState {
             root_dir,
             attachments_dir,
             backups_dir,
+            auth_session: Mutex::new(AuthSession::default()),
         })
     }
 
@@ -75,6 +82,11 @@ impl AppState {
             backups_dir: self.backups_dir.to_string_lossy().into_owned(),
         }
     }
+}
+
+#[derive(Debug, Default)]
+struct AuthSession {
+    authenticated: bool,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, Default)]
@@ -247,6 +259,35 @@ struct BootstrapResponse {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
+struct AuthStatusResponse {
+    configured: bool,
+    authenticated: bool,
+    recovery_code: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+struct AuthSetupPayload {
+    password: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+struct AuthLoginPayload {
+    password: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+struct AuthResetPayload {
+    recovery_code: String,
+    new_password: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+struct AuthChangePasswordPayload {
+    current_password: String,
+    new_password: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
 struct CollectionResponse {
     stats: DashboardStats,
     legajos: Vec<LegajoSummary>,
@@ -335,6 +376,12 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            auth_status,
+            auth_setup,
+            auth_login,
+            auth_logout,
+            auth_change_password,
+            auth_reset_password,
             bootstrap,
             list_legajos,
             get_legajo_detail,
@@ -354,7 +401,161 @@ pub fn run() {
 }
 
 #[tauri::command]
+fn auth_status(state: tauri::State<'_, AppState>) -> Result<AuthStatusResponse, String> {
+    let connection = open_connection(&state)?;
+    let configured = auth_record_exists(&connection).map_err(error_message)?;
+    let authenticated = state
+        .auth_session
+        .lock()
+        .map_err(|_| "No se pudo leer la sesión de acceso.".to_string())?
+        .authenticated;
+    Ok(AuthStatusResponse {
+        configured,
+        authenticated,
+        recovery_code: None,
+    })
+}
+
+#[tauri::command]
+fn auth_setup(
+    payload: AuthSetupPayload,
+    state: tauri::State<'_, AppState>,
+) -> Result<AuthStatusResponse, String> {
+    let connection = open_connection(&state)?;
+    if auth_record_exists(&connection).map_err(error_message)? {
+        return Err("El acceso ya está configurado.".to_string());
+    }
+
+    let password = sanitize_auth_secret(&payload.password, "contraseña")?;
+    let recovery_code = generate_recovery_code();
+    let password_hash = hash_secret(&password).map_err(error_message)?;
+    let recovery_hash = hash_secret(&recovery_code).map_err(error_message)?;
+    let stamp = now_iso();
+    connection
+        .execute(
+            r#"
+            INSERT INTO auth_credentials (id, password_hash, recovery_hash, created_at, updated_at)
+            VALUES (1, ?, ?, ?, ?)
+            "#,
+            params![password_hash, recovery_hash, &stamp, &stamp],
+        )
+        .map_err(error_message)?;
+
+    Ok(AuthStatusResponse {
+        configured: true,
+        authenticated: false,
+        recovery_code: Some(recovery_code),
+    })
+}
+
+#[tauri::command]
+fn auth_login(
+    payload: AuthLoginPayload,
+    state: tauri::State<'_, AppState>,
+) -> Result<AuthStatusResponse, String> {
+    let connection = open_connection(&state)?;
+    let credential = load_auth_record(&connection).map_err(error_message)?;
+    let credential = credential.ok_or_else(|| "Primero debes configurar el acceso.".to_string())?;
+    let password = sanitize_auth_secret(&payload.password, "contraseña")?;
+    if !verify_secret(&credential.password_hash, &password).map_err(error_message)? {
+        return Err("La contraseña no es correcta.".to_string());
+    }
+
+    set_session_authenticated(&state, true)?;
+    Ok(AuthStatusResponse {
+        configured: true,
+        authenticated: true,
+        recovery_code: None,
+    })
+}
+
+#[tauri::command]
+fn auth_logout(state: tauri::State<'_, AppState>) -> Result<AuthStatusResponse, String> {
+    set_session_authenticated(&state, false)?;
+    let connection = open_connection(&state)?;
+    let configured = auth_record_exists(&connection).map_err(error_message)?;
+    Ok(AuthStatusResponse {
+        configured,
+        authenticated: false,
+        recovery_code: None,
+    })
+}
+
+#[tauri::command]
+fn auth_change_password(
+    payload: AuthChangePasswordPayload,
+    state: tauri::State<'_, AppState>,
+) -> Result<AuthStatusResponse, String> {
+    require_authenticated(&state)?;
+    let connection = open_connection(&state)?;
+    let credential = load_auth_record(&connection).map_err(error_message)?;
+    let credential = credential.ok_or_else(|| "Primero debes configurar el acceso.".to_string())?;
+    let current_password = sanitize_auth_secret(&payload.current_password, "contraseña actual")?;
+    let new_password = sanitize_auth_secret(&payload.new_password, "nueva contraseña")?;
+
+    if !verify_secret(&credential.password_hash, &current_password).map_err(error_message)? {
+        return Err("La contraseña actual no es correcta.".to_string());
+    }
+
+    let password_hash = hash_secret(&new_password).map_err(error_message)?;
+    let stamp = now_iso();
+    connection
+        .execute(
+            r#"
+            UPDATE auth_credentials
+            SET password_hash = ?, updated_at = ?
+            WHERE id = 1
+            "#,
+            params![password_hash, &stamp],
+        )
+        .map_err(error_message)?;
+
+    Ok(AuthStatusResponse {
+        configured: true,
+        authenticated: true,
+        recovery_code: None,
+    })
+}
+
+#[tauri::command]
+fn auth_reset_password(
+    payload: AuthResetPayload,
+    state: tauri::State<'_, AppState>,
+) -> Result<AuthStatusResponse, String> {
+    let connection = open_connection(&state)?;
+    let credential = load_auth_record(&connection).map_err(error_message)?;
+    let credential = credential.ok_or_else(|| "Primero debes configurar el acceso.".to_string())?;
+    let recovery_code = sanitize_auth_secret(&payload.recovery_code, "código de recuperación")?;
+    if !verify_secret(&credential.recovery_hash, &recovery_code).map_err(error_message)? {
+        return Err("El código de recuperación no es correcto.".to_string());
+    }
+
+    let new_password = sanitize_auth_secret(&payload.new_password, "nueva contraseña")?;
+    let next_password_hash = hash_secret(&new_password).map_err(error_message)?;
+    let next_recovery_code = generate_recovery_code();
+    let next_recovery_hash = hash_secret(&next_recovery_code).map_err(error_message)?;
+    let stamp = now_iso();
+    connection
+        .execute(
+            r#"
+            UPDATE auth_credentials
+            SET password_hash = ?, recovery_hash = ?, updated_at = ?
+            WHERE id = 1
+            "#,
+            params![next_password_hash, next_recovery_hash, &stamp],
+        )
+        .map_err(error_message)?;
+
+    Ok(AuthStatusResponse {
+        configured: true,
+        authenticated: false,
+        recovery_code: Some(next_recovery_code),
+    })
+}
+
+#[tauri::command]
 fn bootstrap(state: tauri::State<'_, AppState>) -> Result<BootstrapResponse, String> {
+    require_authenticated(&state)?;
     let connection = open_connection(&state)?;
     Ok(BootstrapResponse {
         stats: get_dashboard_stats(&connection)?,
@@ -369,6 +570,7 @@ fn list_legajos(
     filters: Option<Filters>,
     state: tauri::State<'_, AppState>,
 ) -> Result<CollectionResponse, String> {
+    require_authenticated(&state)?;
     let connection = open_connection(&state)?;
     let applied = filters.unwrap_or_default();
     Ok(CollectionResponse {
@@ -382,18 +584,21 @@ fn get_legajo_detail(
     legajo_id: i64,
     state: tauri::State<'_, AppState>,
 ) -> Result<LegajoDetail, String> {
+    require_authenticated(&state)?;
     let connection = open_connection(&state)?;
     get_legajo_detail_internal(&connection, legajo_id).map_err(error_message)
 }
 
 #[tauri::command]
 fn list_areas(state: tauri::State<'_, AppState>) -> Result<Vec<String>, String> {
+    require_authenticated(&state)?;
     let connection = open_connection(&state)?;
     list_areas_internal(&connection)
 }
 
 #[tauri::command]
 fn create_area(area_name: String, state: tauri::State<'_, AppState>) -> Result<String, String> {
+    require_authenticated(&state)?;
     let connection = open_connection(&state)?;
     create_area_internal(&connection, &area_name).map_err(error_message)
 }
@@ -403,6 +608,7 @@ fn save_legajo(
     payload: SaveLegajoPayload,
     state: tauri::State<'_, AppState>,
 ) -> Result<MutationResponse, String> {
+    require_authenticated(&state)?;
     let mut connection = open_connection(&state)?;
     let detail = save_legajo_internal(&mut connection, payload).map_err(error_message)?;
     Ok(MutationResponse {
@@ -414,6 +620,7 @@ fn save_legajo(
 
 #[tauri::command]
 fn delete_legajo(legajo_id: i64, state: tauri::State<'_, AppState>) -> Result<DeleteResponse, String> {
+    require_authenticated(&state)?;
     let mut connection = open_connection(&state)?;
     delete_legajo_internal(&mut connection, legajo_id).map_err(error_message)?;
     Ok(DeleteResponse {
@@ -428,6 +635,7 @@ fn add_attachment(
     legajo_id: i64,
     state: tauri::State<'_, AppState>,
 ) -> Result<AttachmentResponse, String> {
+    require_authenticated(&state)?;
     let Some(source_path) = FileDialog::new()
         .add_filter(
             "Documentos",
@@ -459,6 +667,7 @@ fn open_attachment(
     attachment_id: i64,
     state: tauri::State<'_, AppState>,
 ) -> Result<OpenResponse, String> {
+    require_authenticated(&state)?;
     let connection = open_connection(&state)?;
     let file_path = open_attachment_internal(&connection, attachment_id).map_err(error_message)?;
     open::that_detached(&file_path).map_err(error_message)?;
@@ -470,6 +679,7 @@ fn open_attachment(
 
 #[tauri::command]
 fn create_backup(state: tauri::State<'_, AppState>) -> Result<BackupResponse, String> {
+    require_authenticated(&state)?;
     let connection = open_connection(&state)?;
     let backup_dir = create_backup_internal(&connection, &state).map_err(error_message)?;
     open::that_detached(&backup_dir).map_err(error_message)?;
@@ -480,7 +690,8 @@ fn create_backup(state: tauri::State<'_, AppState>) -> Result<BackupResponse, St
 }
 
 #[tauri::command]
-fn save_template() -> Result<SaveTemplateResponse, String> {
+fn save_template(state: tauri::State<'_, AppState>) -> Result<SaveTemplateResponse, String> {
+    require_authenticated(&state)?;
     let Some(file_path) = FileDialog::new()
         .set_file_name("plantilla-legajos.xlsx")
         .add_filter("Excel", &["xlsx"])
@@ -501,6 +712,7 @@ fn save_template() -> Result<SaveTemplateResponse, String> {
 
 #[tauri::command]
 fn import_legajos(state: tauri::State<'_, AppState>) -> Result<ImportResponse, String> {
+    require_authenticated(&state)?;
     let Some(file_path) = FileDialog::new()
         .add_filter("Excel", &["xlsx", "xls"])
         .pick_file()
@@ -530,6 +742,7 @@ fn export_legajos(
     filters: Option<Filters>,
     state: tauri::State<'_, AppState>,
 ) -> Result<ExportResponse, String> {
+    require_authenticated(&state)?;
     let connection = open_connection(&state)?;
     let applied = filters.unwrap_or_default();
     let rows = list_legajos_internal(&connection, &applied)?;
@@ -636,6 +849,14 @@ fn initialize_schema(connection: &Connection) -> Result<()> {
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL
     );
+
+    CREATE TABLE IF NOT EXISTS auth_credentials (
+      id INTEGER PRIMARY KEY CHECK (id = 1),
+      password_hash TEXT NOT NULL,
+      recovery_hash TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
     "#,
     )?;
     ensure_legajo_columns(connection)?;
@@ -685,6 +906,95 @@ fn create_area_internal(connection: &Connection, raw_name: &str) -> Result<Strin
         params![name, &stamp, &stamp],
     )?;
     Ok(name.to_string())
+}
+
+#[derive(Debug, Clone)]
+struct AuthCredential {
+    password_hash: String,
+    recovery_hash: String,
+}
+
+fn auth_record_exists(connection: &Connection) -> Result<bool> {
+    let exists = connection
+        .query_row("SELECT EXISTS(SELECT 1 FROM auth_credentials WHERE id = 1)", [], |row| {
+            row.get::<_, i64>(0)
+        })?;
+    Ok(exists != 0)
+}
+
+fn load_auth_record(connection: &Connection) -> Result<Option<AuthCredential>> {
+    let record = connection
+        .query_row(
+            "SELECT password_hash, recovery_hash FROM auth_credentials WHERE id = 1",
+            [],
+            |row| {
+                Ok(AuthCredential {
+                    password_hash: row.get(0)?,
+                    recovery_hash: row.get(1)?,
+                })
+            },
+        )
+        .optional()?;
+    Ok(record)
+}
+
+fn set_session_authenticated(state: &AppState, authenticated: bool) -> Result<(), String> {
+    let mut session = state
+        .auth_session
+        .lock()
+        .map_err(|_| "No se pudo actualizar la sesión de acceso.".to_string())?;
+    session.authenticated = authenticated;
+    Ok(())
+}
+
+fn require_authenticated(state: &AppState) -> Result<(), String> {
+    let session = state
+        .auth_session
+        .lock()
+        .map_err(|_| "No se pudo leer la sesión de acceso.".to_string())?;
+    if session.authenticated {
+        Ok(())
+    } else {
+        Err("Debes iniciar sesión para usar esta función.".to_string())
+    }
+}
+
+fn sanitize_auth_secret(raw: &str, label: &str) -> Result<String, String> {
+    let trimmed = raw.trim();
+    if trimmed.len() < 8 {
+        return Err(format!("La {} debe tener al menos 8 caracteres.", label));
+    }
+    Ok(trimmed.to_string())
+}
+
+fn hash_secret(secret: &str) -> Result<String> {
+    let salt = SaltString::generate(&mut OsRng);
+    let hash = Argon2::default()
+        .hash_password(secret.as_bytes(), &salt)
+        .map_err(|error| anyhow!(error.to_string()))?
+        .to_string();
+    Ok(hash)
+}
+
+fn verify_secret(stored_hash: &str, candidate: &str) -> Result<bool> {
+    let parsed = PasswordHash::new(stored_hash).map_err(|error| anyhow!(error.to_string()))?;
+    Ok(Argon2::default()
+        .verify_password(candidate.as_bytes(), &parsed)
+        .is_ok())
+}
+
+fn generate_recovery_code() -> String {
+    const ALPHABET: &[u8] = b"ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+    let mut bytes = [0u8; 16];
+    OsRng.fill_bytes(&mut bytes);
+    let mut code = String::with_capacity(19);
+    for (index, byte) in bytes.iter().enumerate() {
+        if index > 0 && index % 4 == 0 {
+            code.push('-');
+        }
+        code.push(ALPHABET[(*byte as usize) % ALPHABET.len()] as char);
+    }
+    code
 }
 
 fn ensure_legajo_columns(connection: &Connection) -> Result<()> {

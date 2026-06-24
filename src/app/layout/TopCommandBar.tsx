@@ -7,6 +7,8 @@ interface TopCommandBarProps {
   onSearch: (value: string) => void;
   onBackup: () => void;
   onNewLegajo: () => void;
+  onSecurity: () => void;
+  onLogout: () => void;
   scrolled: boolean;
 }
 
@@ -38,6 +40,12 @@ export default function TopCommandBar(props: TopCommandBarProps): JSX.Element {
           </div>
           <ActionButton variant="secondary" onClick={props.onBackup}>
             Crear respaldo
+          </ActionButton>
+          <ActionButton variant="ghost" onClick={props.onSecurity}>
+            Seguridad
+          </ActionButton>
+          <ActionButton variant="ghost" onClick={props.onLogout}>
+            Cerrar sesión
           </ActionButton>
           <ActionButton variant="primary" onClick={props.onNewLegajo}>
             Nuevo legajo

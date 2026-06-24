@@ -11,7 +11,10 @@ import AppShell from "@/app/layout/AppShell";
 import SidebarRail from "@/app/layout/SidebarRail";
 import TopCommandBar from "@/app/layout/TopCommandBar";
 import { routeLegajoId, routeSection, useHashRoute } from "@/app/router";
+import { authApi } from "@/shared/api/auth";
 import { legajoApi } from "@/shared/api/legajo";
+import AuthScreen from "@/features/auth/AuthScreen";
+import SecurityDialog from "@/features/auth/SecurityDialog";
 import { DEFAULT_FILTERS, type Filters, type LegajoDetail, type SaveLegajoPayload } from "@/shared/types/legajo";
 import BirthdayNotice from "@/shared/ui/BirthdayNotice";
 import ToastRegion, { type ToastState } from "@/shared/ui/ToastRegion";
@@ -25,16 +28,24 @@ const LegajosPage = lazy(() => import("@/features/legajos/LegajosPage"));
 export default function App() {
   const { route, navigate } = useHashRoute();
   const queryClient = useQueryClient();
+  const authQuery = createQuery(() => ({
+    queryKey: ["auth-status"],
+    queryFn: () => authApi.status()
+  }));
+  const isAuthenticated = () => Boolean(authQuery.data?.authenticated);
+  const isConfigured = () => Boolean(authQuery.data?.configured);
   const [filters, setFilters] = createSignal<Filters>(DEFAULT_FILTERS);
   const [queryFilters, setQueryFilters] = createSignal<Filters>(DEFAULT_FILTERS);
   const [toast, setToast] = createSignal<ToastState | null>(null);
   const [isDialogOpen, setDialogOpen] = createSignal(false);
+  const [isSecurityOpen, setSecurityOpen] = createSignal(false);
   const [editingLegajo, setEditingLegajo] = createSignal<LegajoDetail | null>(null);
   const [selectedAttachmentId, setSelectedAttachmentId] = createSignal<number | null>(null);
   const [importSummaryText, setImportSummaryText] = createSignal<string | null>(null);
   const [isScrolled, setScrolled] = createSignal(false);
 
   const bootstrapQuery = createQuery(() => ({
+    enabled: isAuthenticated(),
     queryKey: ["bootstrap"],
     queryFn: () => legajoApi.bootstrap()
   }));
@@ -45,7 +56,17 @@ export default function App() {
     onCleanup(() => window.clearTimeout(timer));
   });
 
+  createEffect(() => {
+    if (isAuthenticated()) return;
+    setDialogOpen(false);
+    setSecurityOpen(false);
+    setEditingLegajo(null);
+    setSelectedAttachmentId(null);
+    setImportSummaryText(null);
+  });
+
   const collectionQuery = createQuery(() => ({
+    enabled: isAuthenticated(),
     queryKey: ["legajos", queryFilters()],
     queryFn: () => legajoApi.listLegajos(queryFilters())
   }));
@@ -53,7 +74,7 @@ export default function App() {
   const selectedLegajoId = createMemo(() => routeLegajoId(route()));
 
   const detailQuery = createQuery(() => ({
-    enabled: selectedLegajoId() !== null,
+    enabled: isAuthenticated() && selectedLegajoId() !== null,
     queryKey: ["legajo", selectedLegajoId()],
     queryFn: () => legajoApi.getLegajoDetail(selectedLegajoId()!)
   }));
@@ -139,6 +160,19 @@ export default function App() {
     onError: (error) => showToast(getErrorMessage(error, "No se pudo importar el archivo."), "danger")
   }));
 
+  const logoutMutation = createMutation(() => ({
+    mutationFn: () => authApi.logout(),
+    onSuccess: async () => {
+      queryClient.removeQueries({ queryKey: ["bootstrap"] });
+      queryClient.removeQueries({ queryKey: ["legajos"] });
+      queryClient.removeQueries({ queryKey: ["legajo"] });
+      await authQuery.refetch();
+      navigate("/dashboard");
+      showToast("Sesión cerrada.", "success");
+    },
+    onError: (error) => showToast(getErrorMessage(error, "No se pudo cerrar la sesión."), "danger")
+  }));
+
   const currentStats = createMemo(() => collectionQuery.data?.stats ?? bootstrapQuery.data?.stats);
   const allLegajos = createMemo(() => bootstrapQuery.data?.legajos ?? []);
   const visibleLegajos = createMemo(() => collectionQuery.data?.legajos ?? bootstrapQuery.data?.legajos ?? []);
@@ -173,9 +207,19 @@ export default function App() {
       onSearch={(search) => setFilters((current) => ({ ...current, search }))}
       onBackup={() => runAction(() => legajoApi.createBackup(), "Respaldo creado y abierto en el explorador.")}
       onNewLegajo={openNewLegajo}
+      onSecurity={() => setSecurityOpen(true)}
+      onLogout={() => logoutMutation.mutate()}
       scrolled={isScrolled()}
     />
   );
+
+  if (authQuery.data === undefined) {
+    return <AuthLoading />;
+  }
+
+  if (!isAuthenticated()) {
+    return <AuthScreen configured={isConfigured()} onAuthenticated={() => authQuery.refetch()} />;
+  }
 
   return (
     <>
@@ -266,6 +310,12 @@ export default function App() {
         }}
       />
 
+      <SecurityDialog
+        open={isSecurityOpen()}
+        onOpenChange={setSecurityOpen}
+        onSuccess={(message) => showToast(message, "success")}
+      />
+
       <BirthdayNotice reminders={birthdayReminders()} />
       <ToastRegion toast={toast()} />
     </>
@@ -319,4 +369,16 @@ function RouteLoading() {
 
 function getErrorMessage(error: unknown, fallback: string) {
   return error instanceof Error ? error.message : fallback;
+}
+
+function AuthLoading() {
+  return (
+    <div class="grid min-h-screen place-items-center bg-shell-gradient px-4 py-8 font-body text-ink">
+      <div class="w-full max-w-md rounded-[32px] border border-shell-border bg-white/86 p-8 text-center shadow-shell">
+        <p class="text-[11px] uppercase tracking-[0.24em] text-ink-soft">Seguridad</p>
+        <strong class="mt-2 block text-2xl font-semibold tracking-[-0.03em] text-ink">Preparando acceso</strong>
+        <p class="mt-3 text-sm leading-7 text-ink-soft">Estamos verificando si la sesión está abierta.</p>
+      </div>
+    </div>
+  );
 }

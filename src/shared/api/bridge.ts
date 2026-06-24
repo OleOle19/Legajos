@@ -1,5 +1,12 @@
 import { invoke } from "@tauri-apps/api/core";
 import type {
+  AuthChangePasswordPayload,
+  AuthLoginPayload,
+  AuthResetPayload,
+  AuthSetupPayload,
+  AuthStatusResponse
+} from "@/shared/types/auth";
+import type {
   AttachmentResponse,
   BackupResponse,
   BootstrapResponse,
@@ -30,9 +37,19 @@ export interface LegajoBridge {
   saveTemplate: () => Promise<SaveTemplateResponse>;
 }
 
+export interface AuthBridge {
+  status: () => Promise<AuthStatusResponse>;
+  setup: (payload: AuthSetupPayload) => Promise<AuthStatusResponse>;
+  login: (payload: AuthLoginPayload) => Promise<AuthStatusResponse>;
+  logout: () => Promise<AuthStatusResponse>;
+  changePassword: (payload: AuthChangePasswordPayload) => Promise<AuthStatusResponse>;
+  resetPassword: (payload: AuthResetPayload) => Promise<AuthStatusResponse>;
+}
+
 declare global {
   interface Window {
     legajoAPI: LegajoBridge;
+    authAPI: AuthBridge;
   }
 }
 
@@ -51,9 +68,25 @@ const createBridge = (): LegajoBridge => ({
   saveTemplate: () => invoke("save_template")
 });
 
+const createAuthBridge = (): AuthBridge => ({
+  status: () => invoke("auth_status"),
+  setup: (payload) => invoke("auth_setup", { payload }),
+  login: (payload) => invoke("auth_login", { payload }),
+  logout: () => invoke("auth_logout"),
+  changePassword: (payload) => invoke("auth_change_password", { payload }),
+  resetPassword: (payload) => invoke("auth_reset_password", { payload })
+});
+
 export const legajoBridge = (() => {
   if (!window.legajoAPI) {
     window.legajoAPI = createBridge();
   }
   return window.legajoAPI;
+})();
+
+export const authBridge = (() => {
+  if (!window.authAPI) {
+    window.authAPI = createAuthBridge();
+  }
+  return window.authAPI;
 })();
