@@ -8,7 +8,7 @@
     "dev": "tauri dev",
     "dev:ui": "vite --host 127.0.0.1 --port 1420",
     "build": "tauri build",
-    "build:ui": "vite build",
+    "build:ui": "vite build --configLoader native",
     "check": "tsc --noEmit"
   },
   "dependencies": {

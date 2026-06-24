@@ -8,7 +8,7 @@ Aplicacion de escritorio local para administrar legajos activos y pasivos en una
 - Busqueda y filtros por estado, unidad y regimen.
 - Historial de movimientos.
 - Adjuntos PDF e imagen copiados al almacenamiento interno de la app.
-- Importacion desde plantilla Excel.
+- Importacion desde plantilla Excel o libro multipestana de RR.HH.
 - Exportacion a Excel y PDF.
 - Respaldo local de base de datos y adjuntos.
 
@@ -36,7 +36,7 @@ npm.cmd run check
 ## Flujo de uso
 
 1. Crear legajos manualmente o descargar la plantilla Excel.
-2. Importar la plantilla completada.
+2. Importar la plantilla completada o el libro de RR.HH. con varias hojas.
 3. Consultar el padron y abrir la ficha detallada.
 4. Adjuntar PDFs o imagenes escaneadas.
 5. Exportar la relacion digital a Excel o PDF.

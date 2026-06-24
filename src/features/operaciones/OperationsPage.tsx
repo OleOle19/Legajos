@@ -14,10 +14,10 @@ interface OperationsPageProps {
 export default function OperationsPage(props: OperationsPageProps) {
   return (
     <div class="grid gap-5 xl:grid-cols-3">
-      <SectionCard eyebrow="Carga inicial" title="Importar desde plantilla Excel" class="xl:col-span-1">
+      <SectionCard eyebrow="Carga inicial" title="Importar desde Excel de RR.HH." class="xl:col-span-1">
         <p class="text-sm leading-7 text-ink-soft">
-          Descarga la plantilla, completala en Excel e importa el lote inicial de legajos. Si el numero de legajo ya
-          existe, la fila actualizara el registro.
+          Descarga la plantilla o importa el libro de RR.HH. con varias hojas. Si el numero de legajo ya existe, la
+          fila actualizara el registro.
         </p>
         <div class="mt-6 flex flex-wrap gap-3">
           <ActionButton variant="secondary" onClick={props.onSaveTemplate}>
@@ -60,11 +60,10 @@ export default function OperationsPage(props: OperationsPageProps) {
           </ActionButton>
         </div>
         <div class="mt-6 rounded-3xl border border-shell-border bg-brand/5 p-4 text-sm text-ink-soft">
-          La exportacion y el respaldo siguen usando el flujo Tauri actual, sin cambios en backend ni estructura de
-          datos.
+          La exportacion y el respaldo siguen usando el flujo Tauri actual. La importacion ahora entiende libros de
+          RR.HH. con varias hojas y fechas numericas de Excel.
         </div>
       </SectionCard>
     </div>
   );
 }
-
