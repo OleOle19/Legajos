@@ -5,7 +5,7 @@ import "@fontsource/manrope/700.css";
 import "@fontsource/sora/600.css";
 import "@fontsource/sora/700.css";
 
-import { Suspense, createEffect, createMemo, createSignal, lazy, Match, Switch, onCleanup } from "solid-js";
+import { Suspense, createEffect, createMemo, createSignal, lazy, Match, Switch, onCleanup, onMount } from "solid-js";
 import { createMutation, createQuery, useQueryClient } from "@tanstack/solid-query";
 import AppShell from "@/app/layout/AppShell";
 import SidebarRail from "@/app/layout/SidebarRail";
@@ -15,6 +15,7 @@ import { authApi } from "@/shared/api/auth";
 import { legajoApi } from "@/shared/api/legajo";
 import AuthScreen from "@/features/auth/AuthScreen";
 import SecurityDialog from "@/features/auth/SecurityDialog";
+import type { AuthStatusResponse } from "@/shared/types/auth";
 import { DEFAULT_FILTERS, type Filters, type LegajoDetail, type SaveLegajoPayload } from "@/shared/types/legajo";
 import BirthdayNotice from "@/shared/ui/BirthdayNotice";
 import ToastRegion, { type ToastState } from "@/shared/ui/ToastRegion";
@@ -28,12 +29,11 @@ const LegajosPage = lazy(() => import("@/features/legajos/LegajosPage"));
 export default function App() {
   const { route, navigate } = useHashRoute();
   const queryClient = useQueryClient();
-  const authQuery = createQuery(() => ({
-    queryKey: ["auth-status"],
-    queryFn: () => authApi.status()
-  }));
-  const isAuthenticated = () => Boolean(authQuery.data?.authenticated);
-  const isConfigured = () => Boolean(authQuery.data?.configured);
+  const [authStatus, setAuthStatus] = createSignal<AuthStatusResponse | null>(null);
+  const [isAuthLoading, setAuthLoading] = createSignal(true);
+  const [authError, setAuthError] = createSignal<string | null>(null);
+  const isAuthenticated = () => Boolean(authStatus()?.authenticated);
+  const isConfigured = () => Boolean(authStatus()?.configured);
   const [filters, setFilters] = createSignal<Filters>(DEFAULT_FILTERS);
   const [queryFilters, setQueryFilters] = createSignal<Filters>(DEFAULT_FILTERS);
   const [toast, setToast] = createSignal<ToastState | null>(null);
@@ -97,6 +97,10 @@ export default function App() {
     onScroll();
     container?.addEventListener("scroll", onScroll, { passive: true });
     onCleanup(() => container?.removeEventListener("scroll", onScroll));
+  });
+
+  onMount(() => {
+    void refreshAuthStatus();
   });
 
   const saveLegajoMutation = createMutation(() => ({
@@ -166,7 +170,7 @@ export default function App() {
       queryClient.removeQueries({ queryKey: ["bootstrap"] });
       queryClient.removeQueries({ queryKey: ["legajos"] });
       queryClient.removeQueries({ queryKey: ["legajo"] });
-      await authQuery.refetch();
+      await refreshAuthStatus();
       navigate("/dashboard");
       showToast("Sesión cerrada.", "success");
     },
@@ -213,12 +217,16 @@ export default function App() {
     />
   );
 
-  if (authQuery.data === undefined) {
+  if (isAuthLoading()) {
     return <AuthLoading />;
   }
 
+  if (authError()) {
+    return <AuthError message={authError()!} onRetry={() => void refreshAuthStatus()} />;
+  }
+
   if (!isAuthenticated()) {
-    return <AuthScreen configured={isConfigured()} onAuthenticated={() => authQuery.refetch()} />;
+    return <AuthScreen configured={isConfigured()} onAuthenticated={() => void refreshAuthStatus()} />;
   }
 
   return (
@@ -349,6 +357,20 @@ export default function App() {
     window.clearTimeout(showToastTimeout);
     showToastTimeout = window.setTimeout(() => setToast(null), 2800);
   }
+
+  async function refreshAuthStatus() {
+    setAuthLoading(true);
+    setAuthError(null);
+    try {
+      const response = await authApi.status();
+      setAuthStatus(response);
+    } catch (error) {
+      setAuthStatus(null);
+      setAuthError(getErrorMessage(error, "No se pudo verificar el acceso."));
+    } finally {
+      setAuthLoading(false);
+    }
+  }
 }
 
 let showToastTimeout = 0;
@@ -378,6 +400,25 @@ function AuthLoading() {
         <p class="text-[11px] uppercase tracking-[0.24em] text-ink-soft">Seguridad</p>
         <strong class="mt-2 block text-2xl font-semibold tracking-[-0.03em] text-ink">Preparando acceso</strong>
         <p class="mt-3 text-sm leading-7 text-ink-soft">Estamos verificando si la sesión está abierta.</p>
+      </div>
+    </div>
+  );
+}
+
+function AuthError(props: { message: string; onRetry: () => void }) {
+  return (
+    <div class="grid min-h-screen place-items-center bg-shell-gradient px-4 py-8 font-body text-ink">
+      <div class="w-full max-w-md rounded-[32px] border border-shell-border bg-white/86 p-8 text-center shadow-shell">
+        <p class="text-[11px] uppercase tracking-[0.24em] text-ink-soft">Seguridad</p>
+        <strong class="mt-2 block text-2xl font-semibold tracking-[-0.03em] text-ink">No pudimos abrir el acceso</strong>
+        <p class="mt-3 text-sm leading-7 text-ink-soft">{props.message}</p>
+        <button
+          type="button"
+          class="mt-6 inline-flex items-center justify-center rounded-full border border-brand/25 bg-brand/8 px-5 py-3 text-sm font-semibold text-brand-deep transition hover:border-brand-accent hover:bg-brand/12"
+          onClick={props.onRetry}
+        >
+          Reintentar
+        </button>
       </div>
     </div>
   );
