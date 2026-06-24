@@ -5,7 +5,7 @@ import "@fontsource/manrope/700.css";
 import "@fontsource/sora/600.css";
 import "@fontsource/sora/700.css";
 
-import { createEffect, createMemo, createSignal, Match, Switch, onCleanup } from "solid-js";
+import { Suspense, createEffect, createMemo, createSignal, lazy, Match, Switch, onCleanup } from "solid-js";
 import { createMutation, createQuery, useQueryClient } from "@tanstack/solid-query";
 import AppShell from "@/app/layout/AppShell";
 import SidebarRail from "@/app/layout/SidebarRail";
@@ -15,16 +15,18 @@ import { legajoApi } from "@/shared/api/legajo";
 import { DEFAULT_FILTERS, type Filters, type LegajoDetail, type SaveLegajoPayload } from "@/shared/types/legajo";
 import BirthdayNotice from "@/shared/ui/BirthdayNotice";
 import ToastRegion, { type ToastState } from "@/shared/ui/ToastRegion";
-import DashboardPage from "@/features/dashboard/DashboardPage";
-import OperationsPage from "@/features/operaciones/OperationsPage";
-import LegajosPage from "@/features/legajos/LegajosPage";
 import LegajoFormDialog from "@/features/legajos/LegajoFormDialog";
 import { getBirthdayReminders } from "@/shared/lib/legajo";
+
+const DashboardPage = lazy(() => import("@/features/dashboard/DashboardPage"));
+const OperationsPage = lazy(() => import("@/features/operaciones/OperationsPage"));
+const LegajosPage = lazy(() => import("@/features/legajos/LegajosPage"));
 
 export default function App() {
   const { route, navigate } = useHashRoute();
   const queryClient = useQueryClient();
   const [filters, setFilters] = createSignal<Filters>(DEFAULT_FILTERS);
+  const [queryFilters, setQueryFilters] = createSignal<Filters>(DEFAULT_FILTERS);
   const [toast, setToast] = createSignal<ToastState | null>(null);
   const [isDialogOpen, setDialogOpen] = createSignal(false);
   const [editingLegajo, setEditingLegajo] = createSignal<LegajoDetail | null>(null);
@@ -37,9 +39,15 @@ export default function App() {
     queryFn: () => legajoApi.bootstrap()
   }));
 
+  createEffect(() => {
+    const nextFilters = filters();
+    const timer = window.setTimeout(() => setQueryFilters(nextFilters), 180);
+    onCleanup(() => window.clearTimeout(timer));
+  });
+
   const collectionQuery = createQuery(() => ({
-    queryKey: ["legajos", filters()],
-    queryFn: () => legajoApi.listLegajos(filters())
+    queryKey: ["legajos", queryFilters()],
+    queryFn: () => legajoApi.listLegajos(queryFilters())
   }));
 
   const selectedLegajoId = createMemo(() => routeLegajoId(route()));
@@ -172,7 +180,8 @@ export default function App() {
   return (
     <>
       <AppShell sidebar={sidebar} topbar={topbar} scrolled={isScrolled()}>
-        <Switch>
+        <Suspense fallback={<RouteLoading />}>
+          <Switch>
           <Match when={routeSection(route()) === "dashboard" && currentStats()}>
             {(stats) => (
               <DashboardPage
@@ -217,7 +226,7 @@ export default function App() {
                 onExport={(format) =>
                   runAction(
                     () => legajoApi.exportLegajos(format, filters()),
-                    `Exportacion ${format.toUpperCase()} generada correctamente.`
+                    `Exportación ${format.toUpperCase()} generada correctamente.`
                   )
                 }
                 onResetFilters={resetFilters}
@@ -234,14 +243,15 @@ export default function App() {
               onExport={(format, exportFilters) =>
                 runAction(
                   () => legajoApi.exportLegajos(format, exportFilters),
-                  `Exportacion ${format.toUpperCase()} generada correctamente.`
+                  `Exportación ${format.toUpperCase()} generada correctamente.`
                 )
               }
               onSaveTemplate={() => runAction(() => legajoApi.saveTemplate(), "Plantilla guardada correctamente.")}
               importSummary={importSummaryText()}
             />
           </Match>
-        </Switch>
+          </Switch>
+        </Suspense>
       </AppShell>
 
       <LegajoFormDialog
@@ -280,7 +290,7 @@ export default function App() {
       }
       showToast(successMessage, "success");
     } catch (error) {
-      showToast(getErrorMessage(error, "No se pudo completar la accion."), "danger");
+      showToast(getErrorMessage(error, "No se pudo completar la acción."), "danger");
     }
   }
 
@@ -292,6 +302,20 @@ export default function App() {
 }
 
 let showToastTimeout = 0;
+
+function RouteLoading() {
+  return (
+    <div class="grid min-h-[42vh] place-items-center rounded-card border border-shell-border bg-white/70 p-10 shadow-card">
+      <div class="max-w-sm text-center">
+        <p class="text-[11px] uppercase tracking-[0.2em] text-ink-soft">Cargando módulo</p>
+        <strong class="mt-2 block text-2xl font-semibold tracking-[-0.03em] text-ink">Preparando vista</strong>
+        <p class="mt-3 text-sm leading-7 text-ink-soft">
+          Un momento, estamos levantando la sección seleccionada para que responda mejor.
+        </p>
+      </div>
+    </div>
+  );
+}
 
 function getErrorMessage(error: unknown, fallback: string) {
   return error instanceof Error ? error.message : fallback;

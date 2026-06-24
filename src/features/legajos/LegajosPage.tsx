@@ -22,6 +22,8 @@ type SortKey =
   | "total_adjuntos"
   | "updated_at";
 
+const SORT_COLLATOR = new Intl.Collator("es", { sensitivity: "base", numeric: true });
+
 interface LegajosPageProps {
   filters: Filters;
   legajos: LegajoSummary[];
@@ -50,6 +52,7 @@ export default function LegajosPage(props: LegajosPageProps) {
 
   const sortedRows = createMemo(() => {
     const { key, direction } = sort();
+    if (props.legajos.length < 2) return props.legajos;
     const multiplier = direction === "asc" ? 1 : -1;
     return [...props.legajos].sort((left, right) => compareValues(left[key], right[key], key) * multiplier);
   });
@@ -261,10 +264,7 @@ function compareValues(left: unknown, right: unknown, key: SortKey) {
     return new Date(String(left || 0)).valueOf() - new Date(String(right || 0)).valueOf();
   }
 
-  return String(left || "").localeCompare(String(right || ""), "es", {
-    sensitivity: "base",
-    numeric: true
-  });
+  return SORT_COLLATOR.compare(String(left || ""), String(right || ""));
 }
 
 function activeFilterChips(filters: Filters, sort: { key: SortKey; direction: "asc" | "desc" }) {
