@@ -1,15 +1,18 @@
 import { For } from "solid-js";
 import { cn } from "@/shared/lib/cn";
-import type { BirthdayReminder } from "@/shared/lib/legajo";
+import { formatDateShortLabel, type BirthdayReminder } from "@/shared/lib/legajo";
 
 interface BirthdayNoticeProps {
   reminders: BirthdayReminder[];
 }
 
 export default function BirthdayNotice(props: BirthdayNoticeProps) {
+  const hasBirthdayToday = props.reminders.some((item) => item.daysUntil === 0);
+
   return props.reminders.length > 0 ? (
     <div class="pointer-events-none fixed right-6 top-6 z-[85] w-[min(92vw,360px)]">
-      <article class="overflow-hidden rounded-3xl border border-[#f0d8ad] bg-[linear-gradient(180deg,rgba(255,252,245,0.98)_0%,rgba(249,241,225,0.98)_100%)] shadow-shell">
+      <article class="relative overflow-hidden rounded-3xl border border-[#f0d8ad] bg-[linear-gradient(180deg,rgba(255,252,245,0.98)_0%,rgba(249,241,225,0.98)_100%)] shadow-shell">
+        {hasBirthdayToday && <ConfettiStrip />}
         <div class="border-b border-[#ead6b4] bg-white/55 px-4 py-3">
           <p class="text-[11px] uppercase tracking-[0.2em] text-[#8d5f18]">Aviso cercano</p>
           <strong class="mt-1 block text-base text-ink">Cumpleaños próximos</strong>
@@ -39,7 +42,29 @@ export default function BirthdayNotice(props: BirthdayNoticeProps) {
 }
 
 function formatBirthday(value: string) {
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.valueOf())) return value;
-  return parsed.toLocaleDateString("es-PE", { day: "2-digit", month: "short" });
+  return formatDateShortLabel(value);
+}
+
+function ConfettiStrip() {
+  const pieces = Array.from({ length: 12 }, (_, index) => index);
+  return (
+    <div class="pointer-events-none absolute inset-x-0 top-0 flex h-12 items-start justify-between px-4 pt-3">
+      <For each={pieces}>
+        {(piece) => (
+          <span
+            class={cn(
+              "block h-2 w-2 rounded-sm shadow-sm",
+              piece % 4 === 0 && "bg-[#e7b23b]",
+              piece % 4 === 1 && "bg-[#ff7f50]",
+              piece % 4 === 2 && "bg-[#5aa4ff]",
+              piece % 4 === 3 && "bg-[#61c38f]"
+            )}
+            style={{
+              transform: `rotate(${piece * 14}deg) translateY(${piece % 2 === 0 ? "0px" : "3px"})`
+            }}
+          />
+        )}
+      </For>
+    </div>
+  );
 }

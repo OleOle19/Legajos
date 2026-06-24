@@ -5,7 +5,7 @@ import ActionButton from "@/shared/ui/ActionButton";
 import EmptyState from "@/shared/ui/EmptyState";
 import StatusPill from "@/shared/ui/StatusPill";
 import AttachmentCard from "@/shared/ui/AttachmentCard";
-import { calculateAge } from "@/shared/lib/legajo";
+import { calculateAge, formatDateLabel } from "@/shared/lib/legajo";
 
 interface LegajoDetailPanelProps {
   detail?: LegajoDetail | null;
@@ -249,8 +249,7 @@ function AttachmentPreview(props: { attachment: Adjunto | null }) {
 }
 
 function formatDate(value: string) {
-  const parsed = new Date(value);
-  return Number.isNaN(parsed.valueOf()) ? value : parsed.toLocaleDateString("es-PE");
+  return formatDateLabel(value);
 }
 
 function formatDateTime(value: string) {

@@ -72,6 +72,23 @@ export function calculateAge(dateValue: string, referenceDate = new Date()) {
   return age;
 }
 
+export function formatDateLabel(dateValue: string, options: Intl.DateTimeFormatOptions = {}) {
+  const parsed = parseDate(dateValue);
+  if (!parsed) return dateValue;
+  return parsed.toLocaleDateString("es-PE", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    ...options
+  });
+}
+
+export function formatDateShortLabel(dateValue: string) {
+  const parsed = parseDate(dateValue);
+  if (!parsed) return dateValue;
+  return parsed.toLocaleDateString("es-PE", { day: "2-digit", month: "short" });
+}
+
 export function getBirthdayReminders(rows: LegajoSummary[], daysAhead = 7, referenceDate = new Date()) {
   const referenceDay = startOfDay(referenceDate);
   return rows
@@ -91,7 +108,7 @@ export function getBirthdayReminders(rows: LegajoSummary[], daysAhead = 7, refer
         name: row.apellidos_nombres,
         age,
         daysUntil,
-        nextBirthday: nextBirthday.toISOString(),
+        nextBirthday: formatDateKey(nextBirthday),
         nextAge: age + 1
       } satisfies BirthdayReminder;
     })
@@ -116,9 +133,25 @@ function parseLegajoSequence(value: string) {
 function parseDate(value: string) {
   if (!value) return null;
 
+  if (value.length === 10 && value.charAt(4) === "-" && value.charAt(7) === "-") {
+    const year = Number.parseInt(value.slice(0, 4), 10);
+    const month = Number.parseInt(value.slice(5, 7), 10);
+    const day = Number.parseInt(value.slice(8, 10), 10);
+    const parsedLocal = new Date(year, month - 1, day);
+    if (!Number.isNaN(parsedLocal.valueOf())) return parsedLocal;
+  }
+
   const parts = value.split("-").map((part) => Number.parseInt(part, 10));
   if (parts.length === 3 && parts.every((part) => Number.isFinite(part))) {
     const [year, month, day] = parts;
+    const parsedLocal = new Date(year, month - 1, day);
+    if (!Number.isNaN(parsedLocal.valueOf())) return parsedLocal;
+  }
+
+  if (value.length === 10 && value.charAt(2) === "/" && value.charAt(5) === "/") {
+    const day = Number.parseInt(value.slice(0, 2), 10);
+    const month = Number.parseInt(value.slice(3, 5), 10);
+    const year = Number.parseInt(value.slice(6, 10), 10);
     const parsedLocal = new Date(year, month - 1, day);
     if (!Number.isNaN(parsedLocal.valueOf())) return parsedLocal;
   }
@@ -129,6 +162,13 @@ function parseDate(value: string) {
 
 function startOfDay(value: Date) {
   return new Date(value.getFullYear(), value.getMonth(), value.getDate());
+}
+
+function formatDateKey(value: Date) {
+  const year = value.getFullYear();
+  const month = String(value.getMonth() + 1).padStart(2, "0");
+  const day = String(value.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
 function normalizeText(value: string) {
